@@ -31,39 +31,64 @@ namespace LIB.API.Persistence.Repositories
 
             try
             {
+
+                if (transaction == null)
+                {
+                    // Log the error into the ErrorLog table
+                    var errorLog = new ErrorLog
+                    {
+                        ticketId = GenerateRandomString(6),  // Generate a random ticket ID for tracking
+                        traceId = request.ReferenceId.ToString(),  // The reference ID for the transaction
+                        returnCode = "SB_DS_004",  // The error code indicating transaction not found
+                        EventDate = DateTime.UtcNow,  // Time when the error occurred
+                        feedbacks = "Transaction not found in the database."  // Description of the error
+                    };
+
+                    // Add the error log entry to the database
+                    _dbContext.ErrorLog.Add(errorLog);
+                    await _dbContext.SaveChangesAsync();
+
+                    return new Response
+                    {
+                        IsSuccess = false,
+                        ErrorCode = "SB_DS_004",
+                        Message = "Transaction not found in the database."
+                    };
+                }
+
                 // Call CreateEthswichTransaction
                 var ethswitchResponse = await _ethswichRepositoryAPI.CreateEthswichTransaction(request.Amount.Value, request.PaymentInformation.Account.Id, request.PaymentInformation.Bank.Id);
-///*
-//                if (ethswitchResponse == null || !ethswitchResponse.success)
-//                {
-//                    if (transaction != null)
-//                    {
-//                        transaction.status = "Failed";
-//                        transaction.bankStatusMessage = $"ETSWITCH transaction failed: {ethswitchResponse?.message ?? "No response"}";
-//                        transaction.requestedExecutionDate = DateTime.UtcNow;
-//                        await _dbContext.SaveChangesAsync();
-//                    }
 
-//                    var errorLog = new ErrorLog
-//                    {
-//                        ticketId = GenerateRandomString(6),
-//                        traceId = request.ReferenceId.ToString(),
-//                        returnCode = "SB_ETHSWITCH_002",
-//                        EventDate = DateTime.UtcNow,
-//                        feedbacks = $"ETSWITCH transaction failed: {ethswitchResponse?.message ?? "No response"}"
-//                    };
+                if (ethswitchResponse == null || !ethswitchResponse.success)
+                {
+                    if (transaction != null)
+                    {
+                        transaction.status = "Failed";
+                        transaction.bankStatusMessage = $"ETSWITCH transaction failed: {ethswitchResponse?.message ?? "No response"}";
+                        transaction.requestedExecutionDate = DateTime.UtcNow;
+                        await _dbContext.SaveChangesAsync();
+                    }
 
-//                    _dbContext.ErrorLog.Add(errorLog);
-//                    await _dbContext.SaveChangesAsync();
+                    var errorLog = new ErrorLog
+                    {
+                        ticketId = GenerateRandomString(6),
+                        traceId = request.ReferenceId.ToString(),
+                        returnCode = "SB_ETHSWITCH_002",
+                        EventDate = DateTime.UtcNow,
+                        feedbacks = $"ETSWITCH transaction failed: {ethswitchResponse?.message ?? "No response"}"
+                    };
 
-//                    return new Response
-//                    {
-//                        IsSuccess = false,
-//                        ErrorCode = "SB_ETHSWITCH_002",
-//                        Message = $"ETSWITCH transaction failed: {ethswitchResponse?.message ?? "No response"}"
-//                    };
-//                }
-//*/
+                    _dbContext.ErrorLog.Add(errorLog);
+                    await _dbContext.SaveChangesAsync();
+
+                    return new Response
+                    {
+                        IsSuccess = false,
+                        ErrorCode = "SB_ETHSWITCH_002",
+                        Message = $"ETSWITCH transaction failed: {ethswitchResponse?.message ?? "No response"}"
+                    };
+                }
+
                 // Update transaction status upon successful response
                 if (transaction != null)
                 {
@@ -118,7 +143,15 @@ namespace LIB.API.Persistence.Repositories
                 };
             }
         }
-
+        public async Task<Response> ProcessPaymentAsyncRtgs(TransferRequest request, bool simulationIndicator, string name, string account)
+        {
+            return new Response
+            {
+                IsSuccess = false,
+                ErrorCode = "SB_Rtgs_001",
+                Message = "Rtgs transaction response is null."
+            };
+        }
         public static string GenerateRandomString(int length)
         {
             const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";

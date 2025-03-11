@@ -33,6 +33,20 @@ namespace LIB.API.Persistence.Repositories
             {
                 if (transaction == null)
                 {
+                    // Log the error into the ErrorLog table
+                    var errorLog = new ErrorLog
+                    {
+                        ticketId = GenerateRandomString(6),  // Generate a random ticket ID for tracking
+                        traceId = request.ReferenceId.ToString(),  // The reference ID for the transaction
+                        returnCode = "SB_DS_004",  // The error code indicating transaction not found
+                        EventDate = DateTime.UtcNow,  // Time when the error occurred
+                        feedbacks = "Transaction not found in the database."  // Description of the error
+                    };
+
+                    // Add the error log entry to the database
+                    _dbContext.ErrorLog.Add(errorLog);
+                    await _dbContext.SaveChangesAsync();
+
                     return new Response
                     {
                         IsSuccess = false,
@@ -44,21 +58,21 @@ namespace LIB.API.Persistence.Repositories
                 // Call Mpesa API to process the transfer with amount and phone number
                 FinInsInsResponseDTO mpesaResponse = await _mpesaRepository.CreateMpesaTransfer(request.Amount.Value, request.PaymentInformation.Account.Id);
 
-                //if (mpesaResponse == null || !mpesaResponse.success)
-                //{
-                //    transaction.status = "Failed";
-                //    transaction.bankStatusMessage = mpesaResponse?.message ?? "Mpesa transaction failed.";
-                //    transaction.requestedExecutionDate = DateTime.UtcNow;
-                //    await _dbContext.SaveChangesAsync();
+                if (mpesaResponse == null || !mpesaResponse.success)
+                {
+                    transaction.status = "Failed";
+                    transaction.bankStatusMessage = mpesaResponse?.message ?? "Mpesa transaction failed.";
+                    transaction.requestedExecutionDate = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
 
-                //    return new Response
-                //    {
-                //        IsSuccess = false,
-                //        ErrorCode = "SB_MP_001",
-                //        Message = $"Mpesa transaction failed: {mpesaResponse?.message}",
-                //       // Data = mpesaResponse
-                //    };
-                //}
+                    return new Response
+                    {
+                        IsSuccess = false,
+                        ErrorCode = "SB_MP_001",
+                        Message = $"Mpesa transaction failed: {mpesaResponse?.message}",
+                        // Data = mpesaResponse
+                    };
+                }
 
                 //// Successful transaction update
                 transaction.status = "Success";
@@ -105,6 +119,15 @@ namespace LIB.API.Persistence.Repositories
                     }
                 };
             }
+        }
+        public async Task<Response> ProcessPaymentAsyncRtgs(TransferRequest request, bool simulationIndicator, string name, string account)
+        {
+            return new Response
+            {
+                IsSuccess = false,
+                ErrorCode = "SB_Rtgs_001",
+                Message = "Rtgs transaction response is null."
+            };
         }
 
         public static string GenerateRandomString(int length)

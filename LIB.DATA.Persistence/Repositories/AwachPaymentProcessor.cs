@@ -32,12 +32,30 @@ namespace LIB.API.Persistence.Repositories
             {
                 if (transaction == null)
                 {
-                    return new Response
+                    if (transaction == null)
                     {
-                        IsSuccess = false,
-                        ErrorCode = "SB_DS_004",
-                        Message = "Transaction not found in the database."
-                    };
+                        // Log the error into the ErrorLog table
+                        var errorLog = new ErrorLog
+                        {
+                            ticketId = GenerateRandomString(6),  // Generate a random ticket ID for tracking
+                            traceId = request.ReferenceId.ToString(),  // The reference ID for the transaction
+                            returnCode = "SB_DS_004",  // The error code indicating transaction not found
+                            EventDate = DateTime.UtcNow,  // Time when the error occurred
+                            feedbacks = "Transaction not found in the database."  // Description of the error
+                        };
+
+                        // Add the error log entry to the database
+                        _dbContext.ErrorLog.Add(errorLog);
+                        await _dbContext.SaveChangesAsync();
+
+                        return new Response
+                        {
+                            IsSuccess = false,
+                            ErrorCode = "SB_DS_004",
+                            Message = "Transaction not found in the database."
+                        };
+                    }
+
                 }
 
                 // Call CreateAwachTransfer and process the response
@@ -130,6 +148,15 @@ namespace LIB.API.Persistence.Repositories
                     Message = $"Error processing transaction: {ex.Message}"
                 };
             }
+        }
+        public async Task<Response> ProcessPaymentAsyncRtgs(TransferRequest request, bool simulationIndicator, string name, string account)
+        {
+            return new Response
+            {
+                IsSuccess = false,
+                ErrorCode = "SB_Rtgs_001",
+                Message = "Rtgs transaction response is null."
+            };
         }
         public static string GenerateRandomString(int length)
         {

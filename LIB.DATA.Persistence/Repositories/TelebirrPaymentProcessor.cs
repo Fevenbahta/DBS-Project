@@ -44,51 +44,51 @@ namespace LIB.API.Persistence.Repositories
                 // Call Telebirr API to process the transfer
                 FinInsInsResponseDTO telebirrResponse = await _telebirrRepositoryAPI.CreateTelebirrTransaction(request.Amount.Value, request.PaymentInformation.Account.Id);
 
-                //if (telebirrResponse == null)
-                //{
-                //    return new Response
-                //    {
-                //        IsSuccess = false,
-                //        ErrorCode = "SB_TB_001",
-                //        Message = "Telebirr transaction response is null.",
-                //        Data = new FinInsInsResponseDTO
-                //        {
-                //            success = false,
-                //            message = "Telebirr response is null",
-                //            FinInstransactionId = null,
-                //            ConversationID = null
-                //        }
-                //    };
-                //}
+                if (telebirrResponse == null)
+                {
+                    return new Response
+                    {
+                        IsSuccess = false,
+                        ErrorCode = "SB_TB_001",
+                        Message = "Telebirr transaction response is null.",
+                        Data = new FinInsInsResponseDTO
+                        {
+                            success = false,
+                            message = "Telebirr response is null",
+                            FinInstransactionId = null,
+                            ConversationID = null
+                        }
+                    };
+                }
 
                 //// Handle unsuccessful transactions from Telebirr
-                //if (!telebirrResponse.success)
-                //{
-                //    transaction.status = "Failed";
-                //    transaction.bankStatusMessage = $"Telebirr transaction failed: {telebirrResponse.message}";
-                //    transaction.requestedExecutionDate = DateTime.UtcNow;
-                //    await _dbContext.SaveChangesAsync();
+                if (!telebirrResponse.success)
+                {
+                    transaction.status = "Failed";
+                    transaction.bankStatusMessage = $"Telebirr transaction failed: {telebirrResponse.message}";
+                    transaction.requestedExecutionDate = DateTime.UtcNow;
+                    await _dbContext.SaveChangesAsync();
 
-                //    var errorLog = new ErrorLog
-                //    {
-                //        ticketId = GenerateRandomString(6),
-                //        traceId = request.ReferenceId.ToString(),
-                //        returnCode = "SB_TB_002",
-                //        EventDate = DateTime.UtcNow,
-                //        feedbacks = $"Telebirr transaction failed: {telebirrResponse.message}"
-                //    };
+                    var errorLog = new ErrorLog
+                    {
+                        ticketId = GenerateRandomString(6),
+                        traceId = request.ReferenceId.ToString(),
+                        returnCode = "SB_TB_002",
+                        EventDate = DateTime.UtcNow,
+                        feedbacks = $"Telebirr transaction failed: {telebirrResponse.message}"
+                    };
 
-                //    _dbContext.ErrorLog.Add(errorLog);
-                //    await _dbContext.SaveChangesAsync();
+                    _dbContext.ErrorLog.Add(errorLog);
+                    await _dbContext.SaveChangesAsync();
 
-                //    return new Response
-                //    {
-                //        IsSuccess = false,
-                //        ErrorCode = "SB_TB_002",
-                //        Message = $"Telebirr transaction failed: {telebirrResponse.message}",
-                //        Data = telebirrResponse
-                //    };
-                //}
+                    return new Response
+                    {
+                        IsSuccess = false,
+                        ErrorCode = "SB_TB_002",
+                        Message = $"Telebirr transaction failed: {telebirrResponse.message}",
+                        Data = telebirrResponse
+                    };
+                }
 
                 //// Successful transaction update
                 transaction.status = "Success";
@@ -145,10 +145,20 @@ namespace LIB.API.Persistence.Repositories
                     //    ConversationID = null
                     //}
                 };
+
+
             }
         }
 
-
+        public async Task<Response> ProcessPaymentAsyncRtgs(TransferRequest request, bool simulationIndicator, string name, string account)
+        {
+            return new Response
+            {
+                IsSuccess = false,
+                ErrorCode = "SB_Rtgs_001",
+                Message = "Rtgs transaction response is null."
+            };
+        }
         public static string GenerateRandomString(int length)
         {
             const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";

@@ -24,6 +24,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
 using IRepository;
 using Repository;
+using LIB.API.Persistence.Repositories.ExternalAPI;
 
 
 
@@ -72,8 +73,9 @@ namespace LIB.API.Persistence
 
 
             services.AddScoped<ITransferService, TransferService>();
-          
-            
+
+
+            services.AddScoped<IPaymentProcessor, RtgsPaymentProcessor>();
             services.AddScoped<IPaymentProcessor, AwachPaymentProcessor>();
             services.AddScoped<IPaymentProcessor, MpesaPaymentProcessor>();
             services.AddScoped<IPaymentProcessor, TelebirrPaymentProcessor>();
@@ -85,7 +87,7 @@ namespace LIB.API.Persistence
             services.AddScoped<IEthswichRepositoryAPI,EthswichRepositoryAPI>();
             services.AddScoped<IMpesaRepositoryAPI, MpesaRepositoryAPI>();
             services.AddScoped<ITelebirrRepositoryAPI, TelebirrRepositoryAPI>();
-
+            services.AddScoped<IRtgRepositoryAPI, RtgRepositoryAPI>();
             services.AddScoped<PaymentProcessorFactory>(); // Change this to Scoped
    
 

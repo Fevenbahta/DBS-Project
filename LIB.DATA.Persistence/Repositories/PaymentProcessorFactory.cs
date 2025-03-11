@@ -1,6 +1,7 @@
 ﻿using System;
 using IRepository;
 using LIB.API.Application.Contracts.Persistence;
+using LIB.API.Persistence.Repositories.ExternalAPI;
 
 namespace LIB.API.Persistence.Repositories
 {
@@ -11,17 +12,20 @@ namespace LIB.API.Persistence.Repositories
         private readonly IMpesaRepositoryAPI _mpesaRepositoryAPI;
         private readonly IEthswichRepositoryAPI _ethswichRepositoryAPI;
         private readonly ITelebirrRepositoryAPI _telebirrRepositoryAPI;
+        private readonly IRtgRepositoryAPI _rtgRepositoryAPI;
 
         public PaymentProcessorFactory(LIBAPIDbSQLContext dbContext,
             IAwachRepositoryAPI awachRepositoryAPI,
             IMpesaRepositoryAPI mpesaRepositoryAPI,
-            IEthswichRepositoryAPI ethswichRepositoryAPI,ITelebirrRepositoryAPI telebirrRepositoryAPI)
+            IEthswichRepositoryAPI ethswichRepositoryAPI,ITelebirrRepositoryAPI telebirrRepositoryAPI,IRtgRepositoryAPI rtgRepositoryAPI)
         {
             _dbContext = dbContext;
            _awachRepositoryAPI = awachRepositoryAPI;
             _mpesaRepositoryAPI = mpesaRepositoryAPI;
             _ethswichRepositoryAPI = ethswichRepositoryAPI;
             _telebirrRepositoryAPI = telebirrRepositoryAPI;
+            _rtgRepositoryAPI = rtgRepositoryAPI;
+     
         }
 
         public IPaymentProcessor GetPaymentProcessor(string paymentScheme)
@@ -33,6 +37,7 @@ namespace LIB.API.Persistence.Repositories
                 "MPESATRUST" => new MpesaPaymentProcessor(_dbContext, _mpesaRepositoryAPI),
                 "TELEBIRR" => new TelebirrPaymentProcessor(_dbContext, _telebirrRepositoryAPI),
                 "ETHSWICH" => new EtswichPaymentProcessor(_dbContext, _ethswichRepositoryAPI),
+                "RTGS" => new RtgsPaymentProcessor(_dbContext, _rtgRepositoryAPI),
 
                 _ => throw new NotSupportedException($"Payment scheme '{paymentScheme}' is not supported.")
             };

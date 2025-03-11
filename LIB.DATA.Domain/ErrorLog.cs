@@ -15,7 +15,7 @@ namespace LIB.API.Domain
         public string returnCode { get; set; }
         public DateTime EventDate { get; set; }
         public string feedbacks { get; set; }
-        public string TransactionId { get; set; }
-        public string TransactionType { get; set; }
+        public string? TransactionId { get; set; }
+        public string? TransactionType { get; set; }
     }
 }

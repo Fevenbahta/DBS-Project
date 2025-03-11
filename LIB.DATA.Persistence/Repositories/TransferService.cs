@@ -10,6 +10,8 @@ using LIB.API.Persistence;
 using LIB.API.Persistence.Repositories;
 using System.Net;
 using System.Net.Http;
+using LIB.API.Application.Contracts.Persistence;
+using System.DirectoryServices.Protocols;
 namespace LIB.API.Services
 {
     public class TransferService : ITransferService
@@ -59,7 +61,10 @@ namespace LIB.API.Services
             //string debitedAccount = accountData?.accountNumber ?? "Debited Account Not Found";
             //string accountHolderName = accountData?.holderName ?? "Name Not Found";
 
-         
+
+            string debitedAccount = "000040030000706050";
+           string accountHolderName = "BINEGA TESFA WELDEGEBRIEL";
+
 
 
 
@@ -115,6 +120,94 @@ namespace LIB.API.Services
         
             try
             {
+
+                if (request.PaymentInformation.PaymentScheme == "RTGS")
+                {
+                    // If the simulationIndicator is true, process with simulation
+                    if (simulationIndicator)
+                    {
+                        transactionsimulation.status = "SUCCESS";
+                        transactionsimulation.cbsStatusMessage = "Rtgs Transaction successful (Simulation)";
+                        var apiResponse = new TransferPostResponseBody
+                        {
+                            Id = request.ReferenceId,
+                            Status = "RTGS transaction successful(simulation)"
+                            // Populate other properties as needed
+                        };
+
+                        _dbContext.TransactionSimulation.Add(transactionsimulation);
+                        await _dbContext.SaveChangesAsync();
+
+                        return new Response
+                        {
+                            IsSuccess = true,
+                            Data = apiResponse
+                        };
+                    }
+                    else
+                    {
+
+          
+                        var paymentProcessor = _paymentProcessorFactory.GetPaymentProcessor(request.PaymentInformation.PaymentScheme);
+                      var   apiResponseBody = await paymentProcessor.ProcessPaymentAsyncRtgs(request, simulationIndicator, debitedAccount, accountHolderName);
+
+
+
+
+                        if (apiResponseBody.IsSuccess)
+                        {
+
+                            transaction.status = "SUCCESS";
+                            transaction.cbsStatusMessage = "RTGS Transaction successful";
+
+                            transaction.status = "SUCCESS";
+                            transaction.bankStatusMessage = " Transaction successful";
+                            _dbContext.Transaction.Add(transaction);
+                            await _dbContext.SaveChangesAsync();
+
+                            return new Response
+                        {
+                            IsSuccess = true,
+                            Data = apiResponseBody
+                        }; 
+                        }
+                        else
+                        {
+
+                            transaction.status = "Failed";
+                            transaction.bankStatusMessage = " Transaction Failed";
+                            _dbContext.Transaction.Add(transaction);
+                            await _dbContext.SaveChangesAsync();
+                            var errorLog = new ErrorLog
+                            {
+                                ticketId = GenerateRandomString(6),
+                                traceId = request.ReferenceId.ToString(),
+                                returnCode = "SB_DS_003",
+                                EventDate = DateTime.UtcNow,
+                                feedbacks = $"Error processing RTGS transaction: ",
+                                TransactionType =  "RTGS Real Transaction",
+                                TransactionId = ""
+
+                            };
+
+                            _dbContext.ErrorLog.Add(errorLog);
+                            await _dbContext.SaveChangesAsync();
+
+                            return new Response
+                            {
+                                IsSuccess = false,
+                                ErrorCode = "SB_DS_003",
+                                Message = "Error processing RTGS transaction"
+                            };
+                        }
+
+
+
+                    }
+
+                }
+
+
                 // Save transaction to the database
                 if (simulationIndicator) {     
                     _dbContext.TransactionSimulation.Add(transactionsimulation);
@@ -217,15 +310,7 @@ namespace LIB.API.Services
                                 transactionsimulation.receiptStatus = isReceiptSuccessful ? "SUCCESS" : "FAILED";
 
                                 // Handle success or failure here
-                                if (isReceiptSuccessful)
-                                {
-                                    // Logic for successful receipt generation
-                                }
-                                else
-                                {
-                                    // Logic for failed receipt generation
-                                }
-                            }
+                                       }
                         }
                         catch (HttpRequestException ex)
                         {
@@ -319,11 +404,43 @@ namespace LIB.API.Services
                         }
 
 
-                        return new Response
+
+                        if (apiResponseBody.IsSuccess)
                         {
-                            IsSuccess = true,
-                            Data = apiResponseBody
-                        };
+
+                         
+                            return new Response
+                            {
+                                IsSuccess = true,
+                                Data = apiResponseBody
+                            };
+                        }
+                        else
+                        {
+
+                                  var errorLog = new ErrorLog
+                            {
+                                ticketId = GenerateRandomString(6),
+                                traceId = request.ReferenceId.ToString(),
+                                returnCode = "SB_DS_003",
+                                EventDate = DateTime.UtcNow,
+                                feedbacks = $"Error processing transaction: ",
+                                TransactionType = " Real Transaction",
+                                TransactionId = ""
+
+                            };
+
+                            _dbContext.ErrorLog.Add(errorLog);
+                            await _dbContext.SaveChangesAsync();
+
+                            return new Response
+                            {
+                                IsSuccess = false,
+                                ErrorCode = "SB_DS_003",
+                                Message = $"Error processing transaction for {request.PaymentInformation.PaymentScheme}:{apiResponseBody.Message}"
+                            };
+                        }
+
                     }
                     else
                     {
