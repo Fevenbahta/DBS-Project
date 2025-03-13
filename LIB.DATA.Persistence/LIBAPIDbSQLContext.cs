@@ -28,8 +28,7 @@ namespace LIB.API.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(LIBAPIDbSQLContext).Assembly);
-
-
+          
 
 
         }
@@ -54,8 +53,13 @@ namespace LIB.API.Persistence
         public DbSet<TransactionSimulation> TransactionSimulation { get; set; }
         public DbSet<ErrorLog> ErrorLog{ get; set; }
         
-
-
+        public DbSet<AirlinesOrder> airlinesorder { get; set; }
+        public DbSet<ConfirmOrders> confirmorders { get; set; }
+        public DbSet<AirlinesError> airlineserror { get; set; }
+        public DbSet<AirlinesTransfer> airlinestransfer { get; set; }
+        public DbSet<Refund> refunds { get; set; }
+        public DbSet<ConfirmRefund> confirmRefunds { get; set; }
+        
     }
 
 }

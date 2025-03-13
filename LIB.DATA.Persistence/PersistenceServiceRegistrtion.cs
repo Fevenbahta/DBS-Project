@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Mvc;
 using IRepository;
 using Repository;
 using LIB.API.Persistence.Repositories.ExternalAPI;
+using LIB.API.Application.Contracts.Persistence.LIB.API.Repositories;
 
 
 
@@ -48,7 +49,7 @@ namespace LIB.API.Persistence
             services.AddScoped<UpdateLogService>();
 
        
-            services.AddHttpClient<SoapClient2>();
+          
             services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.InvalidModelStateResponseFactory = context =>
@@ -89,8 +90,15 @@ namespace LIB.API.Persistence
             services.AddScoped<ITelebirrRepositoryAPI, TelebirrRepositoryAPI>();
             services.AddScoped<IRtgRepositoryAPI, RtgRepositoryAPI>();
             services.AddScoped<PaymentProcessorFactory>(); // Change this to Scoped
-   
 
+           services.AddScoped<IAirlinesOrderRepository, AirlinesOrderRepository>();
+           services.AddScoped<IAirlinesOrderService, AirlinesOrderService>();
+            services.AddScoped<IConfirmOrderRepository, ConfirmOrderRepository>();
+            services.AddScoped<IConfirmOrderService, ConfirmOrderService>();
+            services.AddScoped<IRefundRepository, RefundRepository>();
+            services.AddScoped<IDetailRepository, DetailRepository>();
+
+            services.AddHttpClient<SoapClient>();
 
             services.AddHttpClient();
 

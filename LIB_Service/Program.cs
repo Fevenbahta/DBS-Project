@@ -124,6 +124,17 @@ builder.Services.AddControllers()
             var traceId = context.HttpContext.TraceIdentifier;
             var dbContext = context.HttpContext.RequestServices.GetService<LIBAPIDbSQLContext>();
 
+
+
+            var controllerName = context.ActionDescriptor.RouteValues["controller"];
+            var actionName = context.ActionDescriptor.RouteValues["action"];
+            // Define a list of controllers where validation should be skipped
+            var skipValidationControllers = new List<string> { "Refund", "Orders" };
+
+            if (skipValidationControllers.Contains(controllerName))
+            {
+                return null;
+            }
             if (!string.IsNullOrEmpty(context.HttpContext.Request.Headers["Authorization"]))
             {
                 // Collect all validation errors

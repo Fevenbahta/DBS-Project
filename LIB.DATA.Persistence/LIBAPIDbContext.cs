@@ -47,6 +47,8 @@ namespace LIB.API.Persistence
 
         
         public DbSet<UserData> userDatas { get; set; }
+
+        public DbSet<AccountInfos> AccountInfos { get; set; }
     }
 
 }
