@@ -356,9 +356,7 @@ namespace LIB.API.Persistence.Repositories
 
                 string responseString = await response.Content.ReadAsStringAsync();
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var jsonResponse = JsonSerializer.Deserialize<RefundConfirmationResponse>(responseString);
+                     var jsonResponse = JsonSerializer.Deserialize<RefundConfirmationResponse>(responseString);
                     //if (jsonResponse.Status == 1)
                     //{
                         // Save the successful confirmation response to the database
@@ -376,11 +374,11 @@ namespace LIB.API.Persistence.Repositories
                             Status = jsonResponse.Status == 1 ? "1" : "0",
                             Remark = refundRequest.Remark,
                             AccountHolderName = refundRequest.AccountHolderName,
-                            ResponseRefundReferenceCode = jsonResponse.refundReferenceCode,
-                            ResponseBankRefundReference = jsonResponse.bankRefundReference,
-                            ResponseAmount = jsonResponse.Amount,
+                            ResponseRefundReferenceCode = jsonResponse?.refundReferenceCode,
+                            ResponseBankRefundReference = jsonResponse?.bankRefundReference,
+                            ResponseAmount = jsonResponse?.Amount,
                             ResponseStatus = jsonResponse.Status,
-                            ResponseMessage = jsonResponse.message,
+                            ResponseMessage = jsonResponse?.message,
                             CreatedDate = DateTime.UtcNow
                         };
 
@@ -402,19 +400,8 @@ namespace LIB.API.Persistence.Repositories
                     //    return false;
                     //}
 
-                }
-                else
-                {
-                    await LogErrorToAirlinesErrorAsync(
-                        "API Error",
-                        refundRequest.RefundAccountNumber,
-                        "Failed",
-                        responseString,
-                        "ConfirmRefund",
-                        refundRequest.RefundReferenceCode
-                    );
-                    return false;
-                }
+                
+               
             }
         }
         // Helper methods (GenerateRequestId, GenerateMsgId, etc.)

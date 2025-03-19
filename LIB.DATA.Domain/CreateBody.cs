@@ -12,7 +12,6 @@ namespace LIB.API.Domain
         public string DAccountNo { get; set; }
         public string OrderId { get; set; }
         public string ReferenceNo { get; set; }
-        public string PayerCustomerName { get; set; }
         public string TraceNumber { get; set; }
         public string MerchantCode { get; set; }
     }

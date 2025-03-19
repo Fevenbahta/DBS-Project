@@ -41,7 +41,6 @@ namespace LIB.API.Persistence.Repositories
         string DAccountNo,
         string OrderId,
         string ReferenceNo,
-        string PayerCustomerName,
         string traceNumber,
         string merchantCode)
         {
@@ -56,6 +55,7 @@ namespace LIB.API.Persistence.Repositories
                 }
 
                 string DAccountBranch = userDetails?.BRANCH;
+                string DAccountName = userDetails?.FULL_NAME;
                 string CAccountNo = "24101900001";
 
                 bool transferSuccess = await CreateTransferAsync(Amount, DAccountNo, DAccountBranch, CAccountNo, ReferenceNo);
@@ -76,7 +76,7 @@ namespace LIB.API.Persistence.Repositories
                     TraceNumber = traceNumber,
                     ReferenceNumber = ReferenceNo,
                     PaidAccountNumber = DAccountNo,
-                    PayerCustomerName = PayerCustomerName,
+                    PayerCustomerName = DAccountName,
                     ShortCode = merchantCode,
                     RequestDate = DateTime.UtcNow
                 };

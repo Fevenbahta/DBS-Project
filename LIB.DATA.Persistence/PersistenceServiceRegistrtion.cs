@@ -97,7 +97,7 @@ namespace LIB.API.Persistence
             services.AddScoped<IConfirmOrderService, ConfirmOrderService>();
             services.AddScoped<IRefundRepository, RefundRepository>();
             services.AddScoped<IDetailRepository, DetailRepository>();
-
+            services.AddScoped<IBillGetRequestRepository, BillGetRequestRepository>();
             services.AddHttpClient<SoapClient>();
 
             services.AddHttpClient();

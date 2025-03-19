@@ -59,6 +59,8 @@ namespace LIB.API.Persistence
         public DbSet<AirlinesTransfer> airlinestransfer { get; set; }
         public DbSet<Refund> refunds { get; set; }
         public DbSet<ConfirmRefund> confirmRefunds { get; set; }
+        public DbSet<BillGetRequest> BillGetRequests { get; set; }
+        public DbSet<ECPaymentRecords> ECPaymentRecords { get; set; }
         
     }
 

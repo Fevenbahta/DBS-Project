@@ -125,10 +125,7 @@ namespace LIB.API.Controllers
                 errorMessages.Add("ReferenceNo is required.");
             }
 
-            if (string.IsNullOrEmpty(body.PayerCustomerName))
-            {
-                errorMessages.Add("PayerCustomerName is required.");
-            }
+      
 
             if (string.IsNullOrEmpty(body.TraceNumber))
             {
@@ -173,7 +170,6 @@ namespace LIB.API.Controllers
                     body.DAccountNo,
                     body.OrderId,
                     body.ReferenceNo,
-                    body.PayerCustomerName,
                     body.TraceNumber,
                     body.MerchantCode
                 );
