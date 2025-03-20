@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using LIB.API.Application.Contracts.Persistence;
 using LIB.API.Application.DTOs;
 using LIB.API.Domain;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Mysqlx.Crud;
 
@@ -17,11 +18,13 @@ using Mysqlx.Crud;
         public class ConfirmOrderService : IConfirmOrderService
         {
             private readonly IConfirmOrderRepository _confirmOrderRepository;
+        private readonly LIBAPIDbSQLContext _context;
 
-            public ConfirmOrderService(IConfirmOrderRepository confirmOrderRepository)
+        public ConfirmOrderService(IConfirmOrderRepository confirmOrderRepository, LIBAPIDbSQLContext context)
             {
                 _confirmOrderRepository = confirmOrderRepository;
-            }
+            _context = context;
+        }
 
             public async Task<TransactionResponseDto> CreateTransferAsync(decimal Amount, string DAccountNo, string OrderId, string ReferenceNo, string traceNumber, string merchantCode)
         {
@@ -36,8 +39,18 @@ using Mysqlx.Crud;
                     throw new Exception("Error in ConfirmOrderAsync: " + ex.Message);
                 }
             }
+
+        public async Task<bool> IsReferenceNoUniqueAsync(string referenceNo)
+        {
+            // Check if the ReferenceNo already exists in the database
+            var existingRequest = await _context.confirmorders
+                .FirstOrDefaultAsync(b => b.ReferenceId == referenceNo);
+
+            return existingRequest == null; // Return true if not found, false otherwise
         }
+
     }
+}
 
 
 

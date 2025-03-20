@@ -27,18 +27,69 @@ namespace LIB.API.Controllers
                 return BadRequest("Payment request data is required.");
             }
 
+
+            // Step 2: Manually validate the fields in request
+            if (request.PaymentAmount <= 0)
+            {
+                return BadRequest("Error: PaymentAmount must be a positive integer.");
+            }
+
+            if (string.IsNullOrEmpty(request.InvoiceId))
+            {
+                return BadRequest("Error: InvoiceId is required.");
+            }
+          
+
+            if (string.IsNullOrEmpty(request.CustomerCode))
+            {
+                return BadRequest("Error: UniqueCode is required ");
+            }
+
+            if (string.IsNullOrEmpty(request.ReferenceNo))
+            {
+                return BadRequest("Error:  ReferenceNo is required.");
+            }
+         if (string.IsNullOrEmpty(request.ProviderId))
+               {
+          return BadRequest("Error:  BillerId is required.");
+                }
+        if (string.IsNullOrEmpty(request.Currency))
+        {
+    return BadRequest("Error:  Currency is required.");
+         }
+          if (string.IsNullOrEmpty(request.Branch))
+      {
+    return BadRequest("Error:  Branch is required.");
+          }
+
+      if (request.PaymentDate == default(DateTime))
+            {
+                return BadRequest("Error: PaymentDate is required and must be a valid date.");
+            }
+
+                     if (string.IsNullOrEmpty(request.AccountNo))
+            {
+                return BadRequest("Error:  AccountNo is required.");
+            }
+
+
+
+
+            bool isReferenceNoUnique = await _ecPaymentRepository.IsReferenceNoUniqueAsync(request.ReferenceNo);
+            if (!isReferenceNoUnique)
+            {
+                return BadRequest("Error: ReferenceNo must be unique.");
+            }
+
             try
             {
-                // Call the repository to send the JSON request and get the response
-                var response = await _ecPaymentRepository.CreateAndSendSoapRequestAsync(request);
+                var (status, response) = await _ecPaymentRepository.CreateAndSendSoapRequestAsync(request);
 
-                // Return the response from the external API or any relevant data
-                return Ok(new { success = true, response });
+                return Ok(new { Status = status, Id = response });
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
-                // Handle errors (e.g., log the error, return an error message)
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new { Status = "Error", Message = ex.Message });
             }
         }
     }

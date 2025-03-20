@@ -11,6 +11,7 @@ namespace LIB.API.Application.Contracts.Persistence
     public interface IConfirmOrderService
     {
         Task<TransactionResponseDto> CreateTransferAsync(decimal Amount, string DAccountNo, string OrderId, string ReferenceNo, string traceNumber, string merchantCode);
+        Task<bool> IsReferenceNoUniqueAsync(string referenceNo);
     }
 
 }

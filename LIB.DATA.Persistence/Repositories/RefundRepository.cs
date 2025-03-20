@@ -9,6 +9,7 @@ using LIB.API.Application.Contracts.Persistence;
 using LIB.API.Application.Contracts.Persistence.LIB.API.Repositories;
 using LIB.API.Application.Contracts.Persistent;
 using LIB.API.Domain;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace LIB.API.Persistence.Repositories
@@ -323,9 +324,12 @@ namespace LIB.API.Persistence.Repositories
 
         private async Task<bool> ConfirmRefundAsync(RefundConfirmationRequest refundRequest)
         {
-
             string apiUrl = "https://ethiopiangatewaytest.azurewebsites.net/Lion/api/V1.0/Lion/ConfirmRefund";
-            string basicAuthHeader = "Basic your_encoded_credentials"; // Replace with actual Base64-encoded credentials
+
+            // Encode username and password for Basic Authentication
+            string username = "lionbanktest@ethiopianairlines.com";
+            string password = "LI*&%@54778Ba";
+            string credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
 
             var confirmationPayload = new
             {
@@ -341,70 +345,63 @@ namespace LIB.API.Persistence.Repositories
                 Status = refundRequest.Status,  // 1 for Success, 0 for Failure
                 Remark = refundRequest.Remark,
                 AccountHolderName = refundRequest.AccountHolderName,
-             
             };
 
             string jsonPayload = JsonSerializer.Serialize(confirmationPayload);
 
             using (var httpClient = new HttpClient())
             {
-                //httpClient.DefaultRequestHeaders.Add("Authorization", basicAuthHeader);
+                // Add Basic Auth header
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
                 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
                 HttpResponseMessage response = await httpClient.PostAsync(apiUrl, content);
-
                 string responseString = await response.Content.ReadAsStringAsync();
 
-                     var jsonResponse = JsonSerializer.Deserialize<RefundConfirmationResponse>(responseString);
-                    //if (jsonResponse.Status == 1)
-                    //{
-                        // Save the successful confirmation response to the database
-                        var confirmRefund = new ConfirmRefund
-                        {
-                            ShortCode = refundRequest.Shortcode,
-                            Amount = refundRequest.Amount,
-                            Currency = refundRequest.Currency,
-                            OrderId = refundRequest.OrderId,
-                            RefundReferenceCode = refundRequest.RefundReferenceCode,
-                            RefundAccountNumber = refundRequest.RefundAccountNumber,
-                            RefundDate = refundRequest.RefundDate.ToString("yyyy-MM-dd"),
-                            BankRefundReference = refundRequest.BankRefundReference,
-                            RefundFOP = refundRequest.RefundFOP,
-                            Status = jsonResponse.Status == 1 ? "1" : "0",
-                            Remark = refundRequest.Remark,
-                            AccountHolderName = refundRequest.AccountHolderName,
-                            ResponseRefundReferenceCode = jsonResponse?.refundReferenceCode,
-                            ResponseBankRefundReference = jsonResponse?.bankRefundReference,
-                            ResponseAmount = jsonResponse?.Amount,
-                            ResponseStatus = jsonResponse.Status,
-                            ResponseMessage = jsonResponse?.message,
-                            CreatedDate = DateTime.UtcNow
-                        };
+                if (!response.IsSuccessStatusCode)
+                {
+                    await LogErrorToAirlinesErrorAsync(
+                        "API Error",
+                        refundRequest.RefundAccountNumber,
+                        "Failed",
+                        responseString,
+                        "ConfirmRefund",
+                        refundRequest.RefundReferenceCode
+                    );
+                    return false;
+                }
 
-                        _context.confirmRefunds.Add(confirmRefund);
-                        await _context.SaveChangesAsync();
+                var jsonResponse = JsonSerializer.Deserialize<RefundConfirmationResponse>(responseString);
 
-                        return true;
-                    //}
-                    //else
-                    //{
-                    //    await LogErrorToAirlinesErrorAsync(
-                    //        "API Error",
-                    //        refundRequest.RefundAccountNumber,
-                    //        "Failed",
-                    //        responseString,
-                    //        "ConfirmRefund",
-                    //        refundRequest.RefundReferenceCode
-                    //    );
-                    //    return false;
-                    //}
+                var confirmRefund = new ConfirmRefund
+                {
+                    ShortCode = refundRequest.Shortcode,
+                    Amount = refundRequest.Amount,
+                    Currency = refundRequest.Currency,
+                    OrderId = refundRequest.OrderId,
+                    RefundReferenceCode = refundRequest.RefundReferenceCode,
+                    RefundAccountNumber = refundRequest.RefundAccountNumber,
+                    RefundDate = refundRequest.RefundDate.ToString("yyyy-MM-dd"),
+                    BankRefundReference = refundRequest.BankRefundReference,
+                    RefundFOP = refundRequest.RefundFOP,
+                    Status = jsonResponse.Status == 1 ? "1" : "0",
+                    Remark = refundRequest.Remark,
+                    AccountHolderName = refundRequest.AccountHolderName,
+                    ResponseRefundReferenceCode = jsonResponse?.refundReferenceCode,
+                    ResponseBankRefundReference = jsonResponse?.bankRefundReference,
+                    ResponseAmount = jsonResponse?.Amount,
+                    ResponseStatus = jsonResponse.Status,
+                    ResponseMessage = jsonResponse?.message,
+                    CreatedDate = DateTime.UtcNow
+                };
 
-                
-               
+                _context.confirmRefunds.Add(confirmRefund);
+                await _context.SaveChangesAsync();
+
+                return true;
             }
-        }
-        // Helper methods (GenerateRequestId, GenerateMsgId, etc.)
+        }    // Helper methods (GenerateRequestId, GenerateMsgId, etc.)
         private string GenerateBankRefundReference()
         {
             return $"REF{DateTime.UtcNow:yyyyMMddHHmmss}{new Random().Next(1000, 9999)}";
@@ -442,6 +439,17 @@ namespace LIB.API.Persistence.Repositories
         }
 
         private string GetCurrentTimestamp() => DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:sszzz");
+
+
+
+        public async Task<bool> IsReferenceNoUniqueAsync(string referenceNo)
+        {
+            // Check if the ReferenceNo already exists in the database
+            var existingRequest = await _context.refunds
+                .FirstOrDefaultAsync(b => b.ReferenceNumber == referenceNo);
+
+            return existingRequest == null; // Return true if not found, false otherwise
+        }
 
     }
 

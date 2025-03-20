@@ -86,6 +86,11 @@ using Microsoft.AspNetCore.Authorization;
             {
                 errorMessages.Add("Reference Number is required.");
             }
+            bool isReferenceNoUnique = await _refundRepository.IsReferenceNoUniqueAsync(request.ReferenceNumber);
+            if (!isReferenceNoUnique)
+            {
+                errorMessages.Add("Error: ReferenceNo must be unique.");
+            }
 
             // If there are any validation errors, return a bad request response with the errors
             if (errorMessages.Any())

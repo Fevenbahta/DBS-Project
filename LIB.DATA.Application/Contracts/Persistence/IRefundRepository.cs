@@ -15,6 +15,7 @@ namespace LIB.API.Application.Contracts.Persistence
         public interface IRefundRepository
         {
             Task<bool> ProcessRefundAsync(RefundRequest refundRequest);
+            Task<bool> IsReferenceNoUniqueAsync(string referenceNo);
         }
     }
 

@@ -25,15 +25,18 @@ namespace LIB.API.Persistence.Repositories
             _dbContext = dbContext;
         }
 
-        public async Task<OrderResponseDto?> GetOrderAsync(string orderId, string shortCode,string refrence)
+        public async Task<OrderResponseDto?> GetOrderAsync(string orderId,string refrence)
         {
             try
             {
+                string shortCode = "12345";
+
                 // Save request data to the database first
                 var airlinesOrderRequest = new AirlinesOrder
                 {
                     OrderId = orderId,
                     ShortCode = shortCode,
+                    ReferenceId= refrence,
                     RequestDate = DateTime.UtcNow
                 };
 
@@ -44,49 +47,75 @@ namespace LIB.API.Persistence.Repositories
                 string baseUrl = "https://ethiopiangatewaytest.azurewebsites.net";
                 string url = $"{baseUrl}/Lion/api/V1.0/Lion/GetOrder?orderId={orderId}&shortCode={shortCode}";
 
+                // Encode username and password for Basic Authentication
+                string username = "lionbanktest@ethiopianairlines.com";
+                string password = "LI*&%@54778Ba";
+                string credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
+
                 // Create and configure the request
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                //request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(
-                //    Encoding.ASCII.GetBytes(":")) // Empty username and password
-                //);
-
-
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
 
                 // Send the request
                 var response = await _httpClient.SendAsync(request);
                 var responseBody = await response.Content.ReadAsStringAsync();
 
-                if (response.IsSuccessStatusCode)
+
+                // Deserialize the response data
+                var orderResponse = JsonConvert.DeserializeObject<OrderResponseDto>(responseBody);
+                var safeOrderResponse = new OrderResponseDto
                 {
-                    // Deserialize the response data
-                    var orderResponse = JsonConvert.DeserializeObject<OrderResponseDto>(responseBody);
+                    Amount = orderResponse.Amount ,  // Default to 0 if Amount is null
+                    TraceNumber = orderResponse.TraceNumber ?? "",  // Default to empty string if TraceNumber is null
+                    StatusCodeResponse = orderResponse.StatusCodeResponse,  // Default to 0 if StatusCodeResponse is null
+                    StatusCodeResponseDescription = orderResponse.StatusCodeResponseDescription ?? "",  // Default to empty string if StatusCodeResponseDescription is null
+                    ExpireDate = orderResponse.ExpireDate ?? DateTime.MinValue,  // Default to DateTime.MinValue if ExpireDate is null
+                    CustomerName = orderResponse.CustomerName ?? "",  // Default to empty string if CustomerName is null
+                    MerchantId = orderResponse.MerchantId,  // Default to 0 if MerchantId is null
+                    MerchantCode = orderResponse.MerchantCode ?? "",  // Default to empty string if MerchantCode is null
+                    MerchantName = orderResponse.MerchantName ?? "",  // Default to empty string if MerchantName is null
+                    Message = orderResponse.Message ?? "",  // Default to empty string if Message is null
+                    UtilityName = orderResponse.UtilityName ?? "",  // Default to empty string if UtilityName is null
+                    LionTransactionNo = orderResponse.LionTransactionNo ?? "",  // Default to empty string if LionTransactionNo is null
+                    BusinessErrorCode = orderResponse.BusinessErrorCode ?? "",  // Default to empty string if BusinessErrorCode is null
+                    StatusCode = orderResponse.StatusCode ,  // Default to 0 if StatusCode is null
+                    Status = orderResponse.Status ,  // Default to empty string if Status is null
+                    MessageList = orderResponse.MessageList ?? "",  // Default to empty string if MessageList is null
+                    Errors = orderResponse.Errors ?? ""  // Default to empty string if Errors is null
+                };
+                // Update the order request with the response data
+                airlinesOrderRequest.Amount = orderResponse.Amount;  // If Amount is null, default to 0
+                airlinesOrderRequest.TraceNumber = orderResponse.TraceNumber ?? "";  // If TraceNumber is null, default to empty string
+                airlinesOrderRequest.StatusCodeResponse = orderResponse.StatusCodeResponse;  // If StatusCodeResponse is null, default to 0
+                airlinesOrderRequest.StatusCodeResponseDescription = orderResponse.StatusCodeResponseDescription ?? "";  // If StatusCodeResponseDescription is null, default to empty string
+                airlinesOrderRequest.ExpireDate = orderResponse.ExpireDate;  // If ExpireDate is null, default to DateTime.MinValue
+                airlinesOrderRequest.CustomerName = orderResponse.CustomerName ?? "";  // If CustomerName is null, default to empty string
+                airlinesOrderRequest.MerchantId = orderResponse.MerchantId ;  // If MerchantId is null, default to 0
+                airlinesOrderRequest.MerchantCode = orderResponse.MerchantCode ?? "";  // If MerchantCode is null, default to empty string
+                airlinesOrderRequest.MerchantName = orderResponse.MerchantName ?? "";  // If MerchantName is null, default to empty string
+                airlinesOrderRequest.Message = orderResponse.Message ?? "";  // If Message is null, default to empty string
+                airlinesOrderRequest.UtilityName = orderResponse.UtilityName ?? "";  // If UtilityName is null, default to empty string
+                airlinesOrderRequest.LionTransactionNo = orderResponse.LionTransactionNo ?? "";  // If LionTransactionNo is null, default to empty string
+                airlinesOrderRequest.BusinessErrorCode = orderResponse.BusinessErrorCode ?? "";  // If BusinessErrorCode is null, default to empty string
+                airlinesOrderRequest.StatusCode = orderResponse.StatusCode ;  // If StatusCode is null, default to 0
+                airlinesOrderRequest.Status = orderResponse.Status;  // If Status is null, default to empty string
+                airlinesOrderRequest.MessageList = orderResponse.MessageList ?? "";  // If MessageList is null, default to empty string
+                airlinesOrderRequest.Errors = orderResponse.Errors ?? "";  // If Errors is null, default to empty string
 
-                    // Update the order request with the response data
-                    airlinesOrderRequest.Amount = orderResponse.Amount;
-                    airlinesOrderRequest.TraceNumber = orderResponse.TraceNumber;
-                    airlinesOrderRequest.StatusCodeResponse = orderResponse.StatusCodeResponse;
-                    airlinesOrderRequest.StatusCodeResponseDescription = orderResponse.StatusCodeResponseDescription;
-                    airlinesOrderRequest.ExpireDate = orderResponse.ExpireDate;
-                    airlinesOrderRequest.CustomerName = orderResponse.CustomerName;
-                    airlinesOrderRequest.MerchantId = orderResponse.MerchantId;
-                    airlinesOrderRequest.MerchantCode = orderResponse.MerchantCode;
-                    airlinesOrderRequest.MerchantName = orderResponse.MerchantName;
-                    airlinesOrderRequest.Message = orderResponse.Message;
 
-                    // Save the updated order data to the database
-                    _dbContext.airlinesorder.Update(airlinesOrderRequest);
+
+
+                // Save the updated order data to the database
+                _dbContext.airlinesorder.Update(airlinesOrderRequest);
                     await _dbContext.SaveChangesAsync();
 
-                    return orderResponse;
-                }
-
-                return null; // If the API call was not successful
-            }
+                    return safeOrderResponse;
+                          }
             catch (Exception ex)
             {
                 // Handle any errors that occur during the process
                 // Log the error to the AirlinesErrors table
-                await LogErrorToAirlinesErrorAsync("GetOrderAsync", orderId, shortCode, ex.Message, "GetOrder", refrence);
+                await LogErrorToAirlinesErrorAsync("GetOrderAsync", orderId, ex.Message, orderId, refrence);
 
                 // Rethrow the exception to allow it to be handled elsewhere
                 throw new Exception("Error occurred while getting the order.", ex);
@@ -94,7 +123,7 @@ namespace LIB.API.Persistence.Repositories
         }
 
 
-        private async Task LogErrorToAirlinesErrorAsync(string methodName, string orderId, string shortCode, string errorMessage, string errorType,string refrence)
+        private async Task LogErrorToAirlinesErrorAsync(string methodName, string orderId, string errorMessage, string errorType,string refrence)
         {
             var feedback = new
             {
@@ -107,7 +136,7 @@ namespace LIB.API.Persistence.Repositories
                 SpanId = orderId,
                 Parameters = new List<object>
         {
-            new { Code = "0", Value = $"Error in {methodName} for OrderId: {orderId}, ShortCode: {shortCode}" }
+            new { Code = "0", Value = $"Error in {methodName} for OrderId: {orderId}" }
         }
             };
 

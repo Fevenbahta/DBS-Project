@@ -8,6 +8,7 @@ using LIB.API.Persistence;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Authorization;
 using Mysqlx.Crud;
+using LIB.API.Persistence.Repositories;
 
 namespace LIB.API.Controllers
 {
@@ -30,10 +31,13 @@ namespace LIB.API.Controllers
         [HttpGet("get-order")]
         public async Task<IActionResult> GetOrder([FromQuery] OrderRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.OrderId) || string.IsNullOrWhiteSpace(request.ShortCode) || string.IsNullOrWhiteSpace(request.ReferenceId))
+            if (string.IsNullOrWhiteSpace(request.OrderId)  || string.IsNullOrWhiteSpace(request.ReferenceId))
             {
                 // Log the error into the AirlinesError table and return the BadRequest response
-                await SaveErrorToAirlinesErrorAsync(request.OrderId, request.ShortCode, "OrderId and ShortCode are required.", "GetOrder", request.ReferenceId);
+
+
+
+                await SaveErrorToAirlinesErrorAsync(request.OrderId, "OrderId is required.", "GetOrder", request.ReferenceId);
 
                 return BadRequest(new
                 {
@@ -45,7 +49,7 @@ namespace LIB.API.Controllers
                         new
                         {
                             code = "SB_DS_001",
-                            label = "OrderId and ShortCode are required.",
+                            label = "OrderId  is required.",
                             severity = "ERROR",
                             type = "BUS",
                             source = "Request Validation",
@@ -60,11 +64,42 @@ namespace LIB.API.Controllers
                 });
             }
 
+            bool isReferenceNoUnique = await _orderService.IsReferenceNoUniqueAsync(request.ReferenceId);
+            if (!isReferenceNoUnique)
+            {
+                         await SaveErrorToAirlinesErrorAsync(request.OrderId, "Error: ReferenceNo must be unique.", "GetOrder", request.ReferenceId);
+
+                return NotFound(new
+                {
+                    returnCode = "ERROR",
+                    ticketId = Guid.NewGuid().ToString(),
+                    traceId = HttpContext.TraceIdentifier,
+                    feedbacks = new[]
+                    {
+                        new
+                        {
+                            code = "SB_DS_002",
+                            label = "Error: ReferenceNo must be unique.",
+                            severity = "ERROR",
+                            type = "BUS",
+                            source = "GetOrder",
+                            origin = "OrdersController",
+                            spanId = HttpContext.TraceIdentifier,
+                            parameters = new[]
+                            {
+                                new { code = "0", value = "ReferenceNo not unique" }
+                            }
+                        }
+                    }
+                });
+
+            }
+ 
             var order = await _orderService.FetchOrderAsync(request);
             if (order == null)
             {
                 // Log the error into the AirlinesError table and return the NotFound response
-                await SaveErrorToAirlinesErrorAsync(request.OrderId, request.ShortCode, "Order not found or failed to fetch.", "GetOrder", request.ReferenceId);
+                await SaveErrorToAirlinesErrorAsync(request.OrderId,"Order not found or failed to fetch.", "GetOrder", request.ReferenceId);
 
                 return NotFound(new
                 {
@@ -90,8 +125,7 @@ namespace LIB.API.Controllers
                     }
                 });
             }
-
-            return Ok(order);
+           return Ok(order);
         }
 
         // Confirm Order
@@ -137,6 +171,14 @@ namespace LIB.API.Controllers
                 errorMessages.Add("MerchantCode is required.");
             }
 
+
+            bool isReferenceNoUnique = await _confirmOrderService.IsReferenceNoUniqueAsync(body.ReferenceNo);
+            if (!isReferenceNoUnique)
+            {
+                errorMessages.Add("Error: ReferenceNo must be unique.");
+            }
+
+
             // If there are any validation errors, return a bad request response with the errors
             if (errorMessages.Any())
             {
@@ -181,7 +223,6 @@ namespace LIB.API.Controllers
                 // Log the error into the AirlinesError table and return the logged error message.
                 await SaveErrorToAirlinesErrorAsync(
                     body.OrderId,
-                    body.MerchantCode,
                     ex.Message,
                     "CreateOrder",
                     body.ReferenceNo
@@ -211,7 +252,7 @@ namespace LIB.API.Controllers
         }
         // Method to save error details into the AirlinesError table
 
-        private async Task SaveErrorToAirlinesErrorAsync( string orderId, string shortCode, string errorMessage, string errorType,string refrence)
+        private async Task SaveErrorToAirlinesErrorAsync( string orderId,string errorMessage, string errorType,string refrence)
         {
             var feedback = new
             {
@@ -224,7 +265,7 @@ namespace LIB.API.Controllers
                 SpanId = orderId,
                 Parameters = new List<object>
         {
-            new { Code = "0", Value = $"Error in controller for OrderId: {orderId}, ShortCode: {shortCode}" }
+            new { Code = "0", Value = $"Error in controller for OrderId: {orderId}" }
         }
             };
 

@@ -9,7 +9,7 @@ namespace LIB.API.Application.Contracts.Persistence
 {
     public interface IBillGetRequestRepository
     {
-         Task<BillGetResponseDto> ProcessTransactionAsync(BillGetRequestDto billGetRequestDto);
+         Task<List<BillGetResponseDto>> ProcessTransactionAsync(BillGetRequestDto billGetRequestDto);
         Task<bool> IsReferenceNoUniqueAsync(string referenceNo);
     }
 

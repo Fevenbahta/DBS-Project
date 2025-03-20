@@ -6,6 +6,8 @@ using LIB.API.Application.Contracts.Persistence;
 using LIB.API.Domain;
 using Microsoft.Extensions.Http;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
+using Azure;
 
 namespace LIB.API.Persistence.Repositories
 {
@@ -21,7 +23,7 @@ namespace LIB.API.Persistence.Repositories
         }
 
         // Method to create and send the SOAP request
-        public async Task<string> CreateAndSendSoapRequestAsync(ECPaymentRequestDTO request)
+        public async Task<(string Status, string Response)> CreateAndSendSoapRequestAsync(ECPaymentRequestDTO request)
         {
             // Build the SOAP request body
             string soapRequest = BuildSoapRequest(request);
@@ -30,36 +32,67 @@ namespace LIB.API.Persistence.Repositories
             string responseXml = await CallSoapApiAsync(soapRequest);
 
             // Parse the response and save it to the database
-            await SaveRequestResponseAsync(request, responseXml);
+            var (status, responseMessage) = await SaveRequestResponseAsync(request, responseXml);
 
-            return responseXml;  // You can return the response if needed
+            // Return the status and response message
+            return (status, responseMessage);
         }
 
+
         // Save the request and response to the database
-        private async Task SaveRequestResponseAsync(ECPaymentRequestDTO request, string responseXml)
+        private async Task<(string Status, string Response)> SaveRequestResponseAsync(ECPaymentRequestDTO request, string responseXml)
         {
-            // Parse the SOAP response (you may need to customize this based on actual response format)
+            // Parse the SOAP response
             var responseObj = XElement.Parse(responseXml);
-            var status = responseObj.Descendants("status").FirstOrDefault()?.Value ?? "Unknown";
+
+            var statusCodeNode = responseObj.Descendants().FirstOrDefault(e => e.Name.LocalName == "statusCode");
+            string statusCode = statusCodeNode?.Value ?? "Unknown";
+
+            // Initialize default values
+            string paymentId = "N/A";
+            string status = "Error";
+            string responseError = "No error";
+
+            // Check if statusCode is -1 (indicating an error)
+            if (statusCode == "-1")
+            {
+                var errorMessageNode = responseObj.Descendants().FirstOrDefault(e => e.Name.LocalName == "line");
+                responseError = errorMessageNode?.Value ?? "Unknown error occurred";
+            }
+            else
+            {
+                // Extract paymentId and paymentStatus only if no error
+                var paymentIdNode = responseObj.Descendants().FirstOrDefault(e => e.Name.LocalName == "paymentId");
+                paymentId = paymentIdNode?.Value ?? "Unknown";
+
+                var statusNode = responseObj.Descendants().FirstOrDefault(e => e.Name.LocalName == "paymentStatus");
+                status = statusNode?.Value ?? "Error";
+
+                responseError = "No error";
+            }
 
             var paymentRecord = new ECPaymentRecords
             {
                 InvoiceId = request.InvoiceId,
                 ReferenceNo = request.ReferenceNo,
-                UniqueCode = request.UniqueCode,
+                CustomerCode = request.CustomerCode,
                 Reason = request.Reason,
                 PaymentAmount = request.PaymentAmount,
                 PaymentDate = request.PaymentDate,
                 Branch = request.Branch,
                 Currency = request.Currency,
-                Account = request.Account,
-                BillerId = request.BillerId,
-                Status = status,  // Set status from response
-                Response = responseXml  // Store the full response for debugging or logging purposes
+                AccountNo = request.AccountNo,
+                ProviderId = request.ProviderId,
+                Status = status,  // Store the extracted payment status
+                ResponseId = paymentId,  // Store the extracted payment ID,
+                ResponseError= responseError,
+                Response = responseObj.ToString(),
             };
 
             _context.ECPaymentRecords.Add(paymentRecord);
             await _context.SaveChangesAsync();
+
+            return (status, paymentId); // Return extracted values
         }
 
         // Build the SOAP request body
@@ -74,26 +107,26 @@ namespace LIB.API.Persistence.Repositories
                         <amp:requestHeader>
                             <amp:requestId>req12</amp:requestId>
                             <amp:serviceName>createECPaymentV2</amp:serviceName>
-                            <amp:timestamp>{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss}</amp:timestamp>
+                            <amp:timestamp>2025-03-20T13:52:01</amp:timestamp>
                             <amp:originalName>TELEBIRR</amp:originalName>
                             <amp:languageCode>002</amp:languageCode>
                             <amp:userCode>TELEBIRR</amp:userCode>
                         </amp:requestHeader>
                         <amp:createECPaymentV2Request>
-                            <amp:providerId>6</amp:providerId>
+                            <amp:providerId>{request.ProviderId}</amp:providerId>
                             <amp:invoiceId>{request.InvoiceId}</amp:invoiceId>
-                            <amp:customerCode>{request.UniqueCode}</amp:customerCode>
+                            <amp:customerCode>{request.CustomerCode}</amp:customerCode>
                             <amp:debitedAccount>
                                 <amp:branch>{request.Branch}</amp:branch>
                                 <amp:currency>{request.Currency}</amp:currency>
-                                <amp:account>{request.Account}</amp:account>
+                                <amp:account>{request.AccountNo}</amp:account>
                             </amp:debitedAccount>
                             <amp:reason>{request.Reason}</amp:reason>
                             <amp:paymentAmount>{request.PaymentAmount}</amp:paymentAmount>
                             <amp:paymentDate>{request.PaymentDate:yyyy-MM-dd}</amp:paymentDate>
                             <amp:inputBranchCode>{request.Branch}</amp:inputBranchCode>
                             <amp:paymentChannelIdentification>
-                                <amp:paymentUseChannel>{request.BillerId}</amp:paymentUseChannel>
+                                <amp:paymentUseChannel>5</amp:paymentUseChannel>
                             </amp:paymentChannelIdentification>
                             <amp:deferredPayment>0</amp:deferredPayment>
                             <amp:pendingPayment>0</amp:pendingPayment>
@@ -108,20 +141,42 @@ namespace LIB.API.Persistence.Repositories
         // Call SOAP API asynchronously and return the response
         private async Task<string> CallSoapApiAsync(string soapRequest)
         {
-            var client = _httpClientFactory.CreateClient();
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true
+            };
 
-            // Define the SOAP endpoint
-            var url = "https://10.1.7.85:8095/createECPaymentV2"; // Replace with your actual SOAP service URL
-            var content = new StringContent(soapRequest, Encoding.UTF8, "text/xml");
+            using var httpClient = new HttpClient(handler);
 
-            // Send POST request
-            var response = await client.PostAsync(url, content);
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://10.1.7.85:8095/createECPaymentV2")
+            {
+                Content = new StringContent(soapRequest, Encoding.UTF8, "text/xml")
+            };
 
-            // Ensure the request is successful
-            response.EnsureSuccessStatusCode();
+            // ✅ Add SOAPAction header
+            requestMessage.Headers.Add("SOAPAction", "\"createECPaymentV2\"");
 
-            // Return the response body as string
+            // ✅ Ensure the Content-Type header is correct
+            requestMessage.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/xml");
+
+            // ✅ Add Accept header
+            requestMessage.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/xml"));
+
+            // ✅ Send the request
+            var response = await httpClient.SendAsync(requestMessage);
+
+            // ✅ Read and return the response
             return await response.Content.ReadAsStringAsync();
         }
+
+        public async Task<bool> IsReferenceNoUniqueAsync(string referenceNo)
+        {
+            // Check if the ReferenceNo already exists in the database
+            var existingRequest = await _context.ECPaymentRecords
+                .FirstOrDefaultAsync(b => b.ReferenceNo == referenceNo);
+
+            return existingRequest == null; // Return true if not found, false otherwise
+        }
+
     }
 }

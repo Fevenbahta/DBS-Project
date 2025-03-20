@@ -11,6 +11,7 @@ namespace LIB.API.Application.Contracts.Persistence
     public interface IAirlinesOrderService
     {
         Task<OrderResponseDto?> FetchOrderAsync(OrderRequestDto request);
+        Task<bool> IsReferenceNoUniqueAsync(string referenceNo);
     }
 
 }

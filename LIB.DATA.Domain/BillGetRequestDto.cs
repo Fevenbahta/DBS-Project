@@ -10,12 +10,12 @@ namespace LIB.API.Domain
     {
 
         public string BillerType { get; set; }
-        public int ProviderId { get; set; }
+        public string ProviderId { get; set; }
         public string UniqueCode { get; set; }
         public string PhoneNumber { get; set; }
         public string ReferenceNo { get; set; }
         public DateTime TransactionDate { get; set; }
-        public int CustomerId { get; set; }
+        public string AccountNo { get; set; }
     }
 
 }

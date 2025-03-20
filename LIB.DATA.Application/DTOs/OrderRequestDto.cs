@@ -15,7 +15,7 @@ namespace LIB.API.Application.DTOs
         public string OrderId { get; set; }
 
         public string ReferenceId { get; set; }  // Add ReferenceId field
-        public string ShortCode { get; set; }
+      
     }
 
 }

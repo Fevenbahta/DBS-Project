@@ -10,7 +10,7 @@ namespace LIB.API.Application.Contracts.Persistence
 
     public interface IAirlinesOrderRepository
     {
-        Task<OrderResponseDto?> GetOrderAsync(string orderId, string shortCode,string reference);
+        Task<OrderResponseDto?> GetOrderAsync(string orderId,string reference);
     }
 
 }

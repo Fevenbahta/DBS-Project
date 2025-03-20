@@ -87,18 +87,44 @@ namespace LIB.API.Persistence.Repositories
                 string baseUrl = "https://ethiopiangatewaytest.azurewebsites.net/";
                 string url = $"{baseUrl}Lion/api/V1.0/Lion/ConfirmOrder";
 
+                // Encode username and password for Basic Authentication
+                string username = "lionbanktest@ethiopianairlines.com";
+                string password = "LI*&%@54778Ba";
+                string credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
+
                 var request = new HttpRequestMessage(HttpMethod.Post, url);
                 var jsonContent = JsonSerializer.Serialize(confirmOrder);
                 request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
+                // Create HttpClient and set authorization header
                 var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
                 var response = await client.SendAsync(request);
-
-               
-
                 var jsonResponse = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Handle API error logging
+                    await LogErrorToAirlinesErrorAsync(
+                        "API Error",
+                        confirmOrder.OrderId.ToString(),
+                        "Failed",
+                        jsonResponse,
+                        "ConfirmOrder",
+                        confirmOrder.OrderId.ToString()
+                    );
+                    return new TransactionResponseDto
+                    {
+                        Status = "Confirm Order API Error",
+                        Id = ReferenceNo
+                    };
+                }
+
                 var confirmOrderResponse = JsonSerializer.Deserialize<ConfirmOrderResponseDto>(jsonResponse);
 
+                // Map response fields
                 confirmOrder.ExpireDate = confirmOrderResponse?.ExpireDate;
                 confirmOrder.StatusCodeResponse = confirmOrderResponse?.StatusCodeResponse ?? 0;
                 confirmOrder.StatusCodeResponseDescription = confirmOrderResponse?.StatusCodeResponseDescription ?? "Empty response";
@@ -108,10 +134,10 @@ namespace LIB.API.Persistence.Repositories
                 confirmOrder.MerchantName = confirmOrderResponse?.MerchantName ?? "Empty response";
                 confirmOrder.Message = confirmOrderResponse?.Message ?? "Empty response";
                 confirmOrder.ResponseDate = DateTime.UtcNow;
-
+              
+                // Update database
                 _context.confirmorders.Update(confirmOrder);
                 await _context.SaveChangesAsync();
-
                 // Return only the StatusCodeResponse and OrderId
                 return new TransactionResponseDto
                 {

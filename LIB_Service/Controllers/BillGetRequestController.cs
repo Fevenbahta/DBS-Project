@@ -30,30 +30,19 @@ namespace LIB.API.Controllers
                 return BadRequest("Error: Invalid request data: No data provided.");
             }
 
-            // Step 2: Manually validate the fields in BillGetRequestDto
-            if (billGetRequestDto.ProviderId <= 0)
-            {
-                return BadRequest("Error: ProviderId must be a positive integer.");
-            }
+       
+       
 
-            if (string.IsNullOrEmpty(billGetRequestDto.UniqueCode))
+            // Step 3: Conditional validation for PhoneNumber or (ProviderId and UniqueCode)
+            if (string.IsNullOrEmpty(billGetRequestDto.PhoneNumber) &&
+                (string.IsNullOrEmpty(billGetRequestDto.ProviderId)|| string.IsNullOrEmpty(billGetRequestDto.UniqueCode)))
             {
-                return BadRequest("Error: UniqueCode is required.");
-            }
-
-            if (billGetRequestDto.UniqueCode.Length > 50)
-            {
-                return BadRequest("Error: UniqueCode cannot exceed 50 characters.");
-            }
-
-            if (string.IsNullOrEmpty(billGetRequestDto.PhoneNumber) )
-            {
-                return BadRequest("Error: PhoneNumber is required ");
+                return BadRequest("Error: Either PhoneNumber or both ProviderId and UniqueCode are required.");
             }
 
             if (string.IsNullOrEmpty(billGetRequestDto.ReferenceNo))
             {
-                return BadRequest("Error:  ReferenceNo is required.");
+                return BadRequest("Error: ReferenceNo is required.");
             }
 
             if (billGetRequestDto.ReferenceNo.Length > 50)
@@ -66,10 +55,11 @@ namespace LIB.API.Controllers
                 return BadRequest("Error: TransactionDate is required and must be a valid date.");
             }
 
-            if (billGetRequestDto.CustomerId <= 0)
+            if (string.IsNullOrEmpty(billGetRequestDto.AccountNo))
             {
-                return BadRequest("Error: CustomerId must be a positive integer.");
+                return BadRequest("Error: AccountNo is required.");
             }
+
             bool isReferenceNoUnique = await _billGetRequestRepository.IsReferenceNoUniqueAsync(billGetRequestDto.ReferenceNo);
             if (!isReferenceNoUnique)
             {
@@ -87,7 +77,7 @@ namespace LIB.API.Controllers
             catch (Exception ex)
             {
                 // Handle unexpected errors
-                return StatusCode(500, $"Error:  Internal server error: {ex.Message}");
+                return StatusCode(500, $"Error: Internal server error: {ex.Message}");
             }
         }
 

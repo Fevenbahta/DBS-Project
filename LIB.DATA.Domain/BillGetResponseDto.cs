@@ -10,11 +10,16 @@ namespace LIB.API.Domain
     {
         public string Status { get; set; }
         public string ProviderId { get; set; }
+        public string CustomerCode { get; set; }
         public int InvoiceId { get; set; }
         public string InvoiceIdentificationValue { get; set; }
         public decimal InvoiceAmount { get; set; }
         public string CurrencyAlphaCode { get; set; }
         public string CurrencyDesignation { get; set; }
+        public string CustomerName { get; set; }
+        public string ProviderName { get; set; }
+        
+
     }
 
 }

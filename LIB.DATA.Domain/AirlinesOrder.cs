@@ -20,7 +20,7 @@ namespace LIB.API.Domain
 
         public string ShortCode { get; set; }
 
-        public double Amount { get; set; }
+        public decimal Amount { get; set; }
 
         public string TraceNumber { get; set; }
 
@@ -29,9 +29,11 @@ namespace LIB.API.Domain
         public string StatusCodeResponseDescription { get; set; }
 
         public DateTime? ExpireDate { get; set; }
-
+  
+        
         public string CustomerName { get; set; }
 
+        
         public long MerchantId { get; set; }
 
         public string MerchantCode { get; set; }
@@ -39,9 +41,14 @@ namespace LIB.API.Domain
         public string MerchantName { get; set; }
 
         public string Message { get; set; }
+              public int Status { get; set; }  
+        public string BusinessErrorCode { get; set; }
+        public int StatusCode { get; set; }
+        public string MessageList { get; set; }
+        public string LionTransactionNo { get; set; }
 
-        public int Status { get; set; }
-
+        public string Errors { get; set; }
+        public string UtilityName { get; set; }
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;
         public string ReferenceId { get; set; }  // Add ReferenceId field
     }
