@@ -103,6 +103,8 @@ using (var rng = RandomNumberGenerator.Create())
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.RequireHttpsMetadata = true; // Set to true for production
+        options.SaveToken = true;            // Save token in HttpContext
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -111,10 +113,47 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ClockSkew = TimeSpan.Zero
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"])),
+            ClockSkew = TimeSpan.Zero // Optional: Adjust as needed for a grace period
         };
+
+        // Customize the invalid token error response
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                context.HandleResponse(); // Prevents default response handling
+
+                var traceId = context.HttpContext.TraceIdentifier;
+                var feedbacks = new[]
+                {
+            new
+            {
+                code = "SB_DS_002",
+                label = "Token is missing or invalid.",
+                severity = "ERROR",
+                source = "Authorization",
+                spanId = traceId.Split('-').FirstOrDefault() ?? traceId
+            }
+        };
+
+                context.Response.StatusCode = 401; // Set status code
+                context.Response.ContentType = "application/json";
+
+                return context.Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    returnCode = "ERROR",
+                    ticketId = Guid.NewGuid().ToString(),
+                    traceId,
+                    feedbacks
+                }));
+            }
+        };
+
     });
+
+
+
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
@@ -129,7 +168,7 @@ builder.Services.AddControllers()
             var controllerName = context.ActionDescriptor.RouteValues["controller"];
             var actionName = context.ActionDescriptor.RouteValues["action"];
             // Define a list of controllers where validation should be skipped
-            var skipValidationControllers = new List<string> { "Refund", "Orders" , "BillGetRequest" };
+            var skipValidationControllers = new List<string> { "Refund", "Orders" , "BillGetRequest","ECPayment" };
 
             if (skipValidationControllers.Contains(controllerName))
             {

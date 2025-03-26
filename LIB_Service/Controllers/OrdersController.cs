@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Microsoft.AspNetCore.Authorization;
 using Mysqlx.Crud;
 using LIB.API.Persistence.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace LIB.API.Controllers
 {
@@ -28,6 +29,9 @@ namespace LIB.API.Controllers
         }
 
         // Get Order
+
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]  // Ensures the endpoint requires a valid token
+
         [HttpGet("get-order")]
         public async Task<IActionResult> GetOrder([FromQuery] OrderRequestDto request)
         {
@@ -129,6 +133,9 @@ namespace LIB.API.Controllers
         }
 
         // Confirm Order
+
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]  // Ensures the endpoint requires a valid token
+
         [AllowAnonymous]
         [HttpPost("CreateTransfer")]
         public async Task<IActionResult> CreateTransfer([FromBody] CreateBody body)
@@ -166,10 +173,7 @@ namespace LIB.API.Controllers
                 errorMessages.Add("TraceNumber is required.");
             }
 
-            if (string.IsNullOrEmpty(body.MerchantCode))
-            {
-                errorMessages.Add("MerchantCode is required.");
-            }
+        
 
 
             bool isReferenceNoUnique = await _confirmOrderService.IsReferenceNoUniqueAsync(body.ReferenceNo);
@@ -212,8 +216,8 @@ namespace LIB.API.Controllers
                     body.DAccountNo,
                     body.OrderId,
                     body.ReferenceNo,
-                    body.TraceNumber,
-                    body.MerchantCode
+                    body.TraceNumber
+            
                 );
 
                 return Ok(response);
