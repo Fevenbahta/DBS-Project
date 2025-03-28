@@ -14,20 +14,20 @@ namespace LIB.API.Domain
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto-generate ID
 
         public int Id { get; set; }
-        public string InvoiceId { get; set; }
-        public string ReferenceNo { get; set; }
-        public string CustomerCode { get; set; }
-        public string Reason { get; set; }
+        public string? InvoiceId { get; set; }
+        public string? ReferenceNo { get; set; }
+        public string? CustomerId { get; set; }
+        public string? Reason { get; set; }
         public decimal PaymentAmount { get; set; }
         public DateTime PaymentDate { get; set; }
-        public string Branch { get; set; }
-        public string Currency { get; set; }
-        public string AccountNo { get; set; }
-        public string ProviderId { get; set; }
-        public string Status { get; set; }
-        public string Response { get; set; }
-        public string ResponseId { get; set; }
+        public string? Branch { get; set; }
+        public string? Currency { get; set; }
+        public string? AccountNo { get; set; }
+        public string? ProviderId { get; set; }
+        public string? Status { get; set; }
+        public string? Response { get; set; }
+        public string? ResponseId { get; set; }
         
-        public string ResponseError { get; set; }
+        public string? ResponseError { get; set; }
     }
 }

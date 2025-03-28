@@ -16,7 +16,7 @@ namespace LIB.API.Domain
 
         // Request Data
         public string ShortCode { get; set; }
-        public decimal Amount { get; set; }
+        public string Amount { get; set; }
         public string Currency { get; set; }
         public string OrderId { get; set; }
         public string RefundReferenceCode { get; set; }
@@ -32,7 +32,7 @@ namespace LIB.API.Domain
         public string ResponseRefundReferenceCode { get; set; }
         public string ResponseBankRefundReference { get; set; }
         public string ResponseAmount { get; set; }
-        public int ResponseStatus { get; set; }
+        public string ResponseStatus { get; set; }
         public string ResponseMessage { get; set; }
 
         // Timestamp for the record creation

@@ -13,7 +13,18 @@ namespace LIB.API.Domain
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto-generate ID
 
+
+
+
+
         public int Id { get; set; } // Primary Key
+
+        public string OrderId { get; set; }
+        public string ReferenceNo { get; set; }
+        public string TraceNumber { get; set; }
+        public string MerchantCode { get; set; }
+
+
 
         public string RequestId { get; set; }
         public string MsgId { get; set; }
@@ -30,7 +41,7 @@ namespace LIB.API.Domain
 
         public DateTime TransferDate { get; set; }  // The date of transfer
         public string ResponseStatus { get; set; }  // Status of the response (Success/Failure)
-        public string ErrorReason { get; set; }  // If failed, why it failed
+        public string? ErrorReason { get; set; }  // If failed, why it failed
         public DateTime RequestTimestamp { get; set; } = DateTime.UtcNow;  // Timestamp when request is made
         public DateTime? ResponseTimestamp { get; set; }  // Timestamp when the response is received
         public bool IsSuccessful { get; set; }

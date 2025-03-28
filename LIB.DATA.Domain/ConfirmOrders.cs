@@ -19,7 +19,7 @@ namespace LIB.API.Domain
         public string ShortCode { get; set; }
         public decimal Amount { get; set; }
         public string Currency { get; set; }
-        public int Status { get; set; }
+        public string Status { get; set; }
         public string Remark { get; set; }
         public string TraceNumber { get; set; }
         public string ReferenceNumber { get; set; }

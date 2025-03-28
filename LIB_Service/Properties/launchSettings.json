@@ -18,7 +18,7 @@
             "ASPNETCORE_ENVIRONMENT": "Development"
         },
         "dotnetRunMessages": true,
-        "applicationUrl": "https://localhost:7008",
+        "applicationUrl": "https://10.1.22.206:7008",
 
         "nativeDebugging": true
     },

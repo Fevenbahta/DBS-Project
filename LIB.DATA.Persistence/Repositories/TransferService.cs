@@ -43,16 +43,17 @@ namespace LIB.API.Services
                 creditedAccount = "11510306001";
             else if (request.PaymentInformation.PaymentScheme == "TELEBIRR")
                 creditedAccount = "22100300001";
-            else if (request.PaymentInformation.PaymentScheme == "ETSWICH")
+            else if (request.PaymentInformation.PaymentScheme == "ETHSWICH")
                 creditedAccount = "11510305000";
 
             else if (request.PaymentInformation.PaymentScheme == "MPESATRUST")
                 creditedAccount = "00112258646";
-            else if (request.PaymentInformation.PaymentScheme == "Awach")
+            else if (request.PaymentInformation.PaymentScheme == "AWACH")
                 creditedAccount = "00311925933";
             else if (request.PaymentInformation.PaymentScheme == "FANA")
                 creditedAccount = "00310095104";
-
+            else if (request.PaymentInformation.PaymentScheme == "HELLOCASH")
+                creditedAccount = "00310095104";
 
             //var accountApiUrl = $"https://localhost/api/v3/accounts/{request.PaymentInformation.Account.Id}";
             //var accountResponse = await _httpClient.GetStringAsync(accountApiUrl);
@@ -393,7 +394,7 @@ namespace LIB.API.Services
                         await _dbContext.SaveChangesAsync();
                        if (request.PaymentInformation.PaymentScheme== "AWACH"|| request.PaymentInformation.PaymentScheme == "MPESAWALLET"||
                                 request.PaymentInformation.PaymentScheme == "MPESATRUST"|| request.PaymentInformation.PaymentScheme == "TELEBIRR"||
-                                request.PaymentInformation.PaymentScheme == "ETSWICH")
+                                request.PaymentInformation.PaymentScheme == "ETSWICH"|| request.PaymentInformation.PaymentScheme == "HELLOCASH")
                             {
                                 var paymentProcessor = _paymentProcessorFactory.GetPaymentProcessor(request.PaymentInformation.PaymentScheme);
                                 apiResponseBody = await paymentProcessor.ProcessPaymentAsync(request, simulationIndicator);

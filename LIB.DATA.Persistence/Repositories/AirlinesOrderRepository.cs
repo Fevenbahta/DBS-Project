@@ -29,7 +29,7 @@ namespace LIB.API.Persistence.Repositories
         {
             try
             {
-                string shortCode = "12345";
+                string shortCode = "526341";
 
                 // Save request data to the database first
                 var airlinesOrderRequest = new AirlinesOrder
@@ -88,7 +88,10 @@ namespace LIB.API.Persistence.Repositories
                 airlinesOrderRequest.TraceNumber = orderResponse.TraceNumber ?? "";  // If TraceNumber is null, default to empty string
                 airlinesOrderRequest.StatusCodeResponse = orderResponse.StatusCodeResponse;  // If StatusCodeResponse is null, default to 0
                 airlinesOrderRequest.StatusCodeResponseDescription = orderResponse.StatusCodeResponseDescription ?? "";  // If StatusCodeResponseDescription is null, default to empty string
-                airlinesOrderRequest.ExpireDate = orderResponse.ExpireDate;  // If ExpireDate is null, default to DateTime.MinValue
+                airlinesOrderRequest.ExpireDate = orderResponse.ExpireDate.HasValue
+            ? DateTime.SpecifyKind(orderResponse.ExpireDate.Value, DateTimeKind.Utc)
+            : DateTime.UtcNow;
+                // If ExpireDate is null, default to DateTime.MinValue
                 airlinesOrderRequest.CustomerName = orderResponse.CustomerName ?? "";  // If CustomerName is null, default to empty string
                 airlinesOrderRequest.MerchantId = orderResponse.MerchantId ;  // If MerchantId is null, default to 0
                 airlinesOrderRequest.MerchantCode = orderResponse.MerchantCode ?? "";  // If MerchantCode is null, default to empty string

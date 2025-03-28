@@ -13,11 +13,13 @@ namespace LIB.API.Persistence.Repositories
         private readonly IEthswichRepositoryAPI _ethswichRepositoryAPI;
         private readonly ITelebirrRepositoryAPI _telebirrRepositoryAPI;
         private readonly IRtgRepositoryAPI _rtgRepositoryAPI;
+        private readonly IHellocashRepositoryAPI _hellocashRepositoryAPI;
 
         public PaymentProcessorFactory(LIBAPIDbSQLContext dbContext,
             IAwachRepositoryAPI awachRepositoryAPI,
             IMpesaRepositoryAPI mpesaRepositoryAPI,
-            IEthswichRepositoryAPI ethswichRepositoryAPI,ITelebirrRepositoryAPI telebirrRepositoryAPI,IRtgRepositoryAPI rtgRepositoryAPI)
+            IEthswichRepositoryAPI ethswichRepositoryAPI,ITelebirrRepositoryAPI telebirrRepositoryAPI,IRtgRepositoryAPI rtgRepositoryAPI,
+            IHellocashRepositoryAPI hellocashRepositoryAPI)
         {
             _dbContext = dbContext;
            _awachRepositoryAPI = awachRepositoryAPI;
@@ -25,7 +27,7 @@ namespace LIB.API.Persistence.Repositories
             _ethswichRepositoryAPI = ethswichRepositoryAPI;
             _telebirrRepositoryAPI = telebirrRepositoryAPI;
             _rtgRepositoryAPI = rtgRepositoryAPI;
-     
+            _hellocashRepositoryAPI = hellocashRepositoryAPI;
         }
 
         public IPaymentProcessor GetPaymentProcessor(string paymentScheme)
@@ -38,6 +40,7 @@ namespace LIB.API.Persistence.Repositories
                 "TELEBIRR" => new TelebirrPaymentProcessor(_dbContext, _telebirrRepositoryAPI),
                 "ETHSWICH" => new EtswichPaymentProcessor(_dbContext, _ethswichRepositoryAPI),
                 "RTGS" => new RtgsPaymentProcessor(_dbContext, _rtgRepositoryAPI),
+                "HELLOCASH" => new HelloCashPaymentProcessor(_dbContext, _hellocashRepositoryAPI),
 
                 _ => throw new NotSupportedException($"Payment scheme '{paymentScheme}' is not supported.")
             };

@@ -40,8 +40,8 @@ namespace LIB.API.Domain
           public string DAccountBranch { get; set; } // Creditor Account Branch
       
         public DateTime TransferDate { get; set; }  // The date of transfer
-        public string CBSResponseStatus { get; set; }  // Status of the response (Success/Failure)
-        public string CBSErrorReason { get; set; }  // If failed, why it failed
+        public string? CBSResponseStatus { get; set; }  // Status of the response (Success/Failure)
+        public string? CBSErrorReason { get; set; }  // If failed, why it failed
         public DateTime CBSRequestTimestamp { get; set; } = DateTime.Now;  // Timestamp when request is made
         public DateTime? CBSResponseTimestamp { get; set; }  // Timestamp when the response is received
         public bool CBSIsSuccessful { get; set; }

@@ -18,7 +18,7 @@ namespace LIB.API.Domain
         public string CurrencyDesignation { get; set; }
         public string CustomerName { get; set; }
         public string ProviderName { get; set; }
-        
+        public string Deadline { get; set; }
 
     }
 

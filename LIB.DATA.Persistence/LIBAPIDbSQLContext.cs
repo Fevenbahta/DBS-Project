@@ -2,6 +2,7 @@
 using LIB.API.Domain;
 using LIB.API.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,8 +29,22 @@ namespace LIB.API.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(LIBAPIDbSQLContext).Assembly);
-          
 
+            var stringConverter = new ValueConverter<string, string>(
+           v => v ?? "", // Convert null to empty string when saving
+           v => v ?? ""  // Convert null to empty string when reading
+       );
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(string))
+                    {
+                        property.SetValueConverter(stringConverter);
+                    }
+                }
+            }
 
         }
 
@@ -61,7 +76,8 @@ namespace LIB.API.Persistence
         public DbSet<ConfirmRefund> confirmRefunds { get; set; }
         public DbSet<BillGetRequest> BillGetRequests { get; set; }
         public DbSet<ECPaymentRecords> ECPaymentRecords { get; set; }
-        
+        public DbSet<BillError> billerror { get; set; }
+
     }
 
 }

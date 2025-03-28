@@ -26,6 +26,7 @@ using IRepository;
 using Repository;
 using LIB.API.Persistence.Repositories.ExternalAPI;
 using LIB.API.Application.Contracts.Persistence.LIB.API.Repositories;
+using Microsoft.Extensions.Hosting;
 
 
 
@@ -81,7 +82,7 @@ namespace LIB.API.Persistence
             services.AddScoped<IPaymentProcessor, MpesaPaymentProcessor>();
             services.AddScoped<IPaymentProcessor, TelebirrPaymentProcessor>();
             services.AddScoped<IPaymentProcessor, EtswichPaymentProcessor>();
-
+            services.AddScoped<IPaymentProcessor, HelloCashPaymentProcessor>();
 
 
             services.AddScoped<IAwachRepositoryAPI, AwachRepositoryAPI>();
@@ -89,6 +90,7 @@ namespace LIB.API.Persistence
             services.AddScoped<IMpesaRepositoryAPI, MpesaRepositoryAPI>();
             services.AddScoped<ITelebirrRepositoryAPI, TelebirrRepositoryAPI>();
             services.AddScoped<IRtgRepositoryAPI, RtgRepositoryAPI>();
+            services.AddScoped<IHellocashRepositoryAPI, HellocashRepositoryAPI>();
             services.AddScoped<PaymentProcessorFactory>(); // Change this to Scoped
 
            services.AddScoped<IAirlinesOrderRepository, AirlinesOrderRepository>();
@@ -100,8 +102,13 @@ namespace LIB.API.Persistence
             services.AddScoped<IBillGetRequestRepository, BillGetRequestRepository>();
             services.AddScoped<IECPaymentRepository, ECPaymentRepository>();
             services.AddHttpClient<SoapClient>();
-
+            services.AddScoped<TaskRefundService>();
+            services.AddScoped<TaskConfirmOrderService>();
             services.AddHttpClient();
+      
+
+            // Register your IHostedService as a concrete implementation
+            services.AddHostedService<ProcessingBackgroundService>();
 
             string connectionString = configuration.GetConnectionString("LIBAPIConnectionString");
             string connectionSqlString = configuration.GetConnectionString("LIBAPISQLConnectionString");

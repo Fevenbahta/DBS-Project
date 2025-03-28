@@ -168,7 +168,7 @@ builder.Services.AddControllers()
             var controllerName = context.ActionDescriptor.RouteValues["controller"];
             var actionName = context.ActionDescriptor.RouteValues["action"];
             // Define a list of controllers where validation should be skipped
-            var skipValidationControllers = new List<string> { "Refund", "Orders" , "BillGetRequest","ECPayment" };
+            var skipValidationControllers = new List<string> { "Refund", "Orders" , "BillRequest","ECPayment" };
 
             if (skipValidationControllers.Contains(controllerName))
             {

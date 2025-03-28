@@ -12,7 +12,7 @@ namespace LIB.API.Domain
         [Required]
         [RegularExpression("^(LOCAL_TRANSFER|INTERNAL_TRANSFER|CUSTOM)$")]
         public string? PaymentType { get; set; }
-        [RegularExpression("^(AWACH|MPESAWALLET|MPESATRUST|TELEBIRR|ETHSWICH|RTGS)$")]
+        [RegularExpression("^(AWACH|MPESAWALLET|MPESATRUST|TELEBIRR|ETHSWICH|RTGS|HELLOCASH|INTER_ACC|LIB_INTERNAL|FANA)$")]
         public string? PaymentScheme { get; set; }
 
         public PaymentAccount Account { get; set; }

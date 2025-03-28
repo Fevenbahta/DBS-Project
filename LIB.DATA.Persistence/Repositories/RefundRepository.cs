@@ -27,10 +27,67 @@ namespace LIB.API.Persistence.Repositories
                 _context = context;
             _detailRepository = detailRepository;
         }
+      string  MerchantCode = "526341";
+
 
             public async Task<bool> ProcessRefundAsync(
             RefundRequest refundRequest)
             {
+
+            var transaction = await _context.airlinestransfer
+                .FirstOrDefaultAsync(t => t.ReferenceNo == refundRequest.RefundReferenceCode
+                                        && t.ResponseStatus == "Success"
+                                        && t.MerchantCode == MerchantCode
+                                        && t.OrderId == refundRequest.OrderId);
+
+            if (transaction == null)
+            {
+                await LogErrorToAirlinesErrorAsync("ReferenceNotFound", refundRequest.RefundAccountNumber, "Reference number not found in AirlinesTransaction", "", "ProcessRefund", refundRequest.ReferenceNumber);
+                throw new Exception("Reference number not found or status is not 'success' in AirlinesTransaction.");
+            }
+
+
+            // Step 2: Check if the transaction amount is less than the sum of the refund amount + requested refund amount
+            var refunds = await _context.refunds
+      .Where(r => r.RefundReferenceCode == refundRequest.RefundReferenceCode
+       && r.OrderId == refundRequest.OrderId
+                && r.ShortCode ==MerchantCode)
+      .OrderByDescending(r => r.TransferDate)  // Get latest refunds first
+      .ToListAsync();
+
+
+            // Calculate total refunded amount for this reference number
+            decimal totalRefundedAmount = refunds.Sum(r => r.Amount);
+
+            // Check if the new refund request exceeds the transaction amount
+            if (totalRefundedAmount + refundRequest.Amount > transaction.Amount)
+            {
+                await LogErrorToAirlinesErrorAsync(
+                    "AmountExceeded",
+                    refundRequest.RefundAccountNumber,
+                    "Refund amount exceeds transaction amount",
+                    "",
+                    "ProcessRefund",
+                    refundRequest.ReferenceNumber
+                );
+
+                throw new Exception("Refund amount exceeds the transaction amount.");
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             // Call the CreateTransferAsync method to process the SOAP request
             var userDetails = await _detailRepository.GetUserDetailsByAccountNumberAsync(refundRequest.RefundAccountNumber);
 
@@ -231,7 +288,7 @@ namespace LIB.API.Persistence.Repositories
                     EndToEndId = endToEndId,
                     Amount = Amount,
                     Currency = "ETB", // Currency from request (ETB used here)
-                    ShortCode = refundRequest.ShortCode,
+                    ShortCode = MerchantCode,
                     FirstName = refundRequest.FirstName,
                     LastName = refundRequest.LastName,
                     OrderId = refundRequest.OrderId,
@@ -253,15 +310,16 @@ namespace LIB.API.Persistence.Repositories
             {
                 var refundConfirmationRequest = new RefundConfirmationRequest
                 {
+                    Shortcode= MerchantCode,
                     RefundReferenceCode = refundRequest.RefundReferenceCode,
                     BankRefundReference = pmtInfId, // Ensure a valid bank reference
                     OrderId = refundRequest.OrderId,
-                    Amount = refundRequest.Amount,
+                    Amount = refundRequest.Amount.ToString(),
                     Currency = refundRequest.Currency,
                     RefundAccountNumber = refundRequest.RefundAccountNumber,
                     RefundDate = DateTime.UtcNow, // Use current date if needed
                     RefundFOP = refundRequest.RefundFOP,
-                    Status = 1, // Success
+                    Status = "1", // Success
                     Remark = "Refund successfully processed",
                     AccountHolderName = refundRequest.FirstName+refundRequest.LastName,
                 };
@@ -276,6 +334,8 @@ namespace LIB.API.Persistence.Repositories
             else
             {
                 await LogErrorToAirlinesErrorAsync("Transfer", DAccountNo, "Failed", reason, "CreateTransfer", RefrenceNo);
+                throw new Exception(reason);
+
             }
 
 
@@ -333,7 +393,7 @@ namespace LIB.API.Persistence.Repositories
 
             var confirmationPayload = new
             {
-                shortcode = refundRequest.Shortcode,
+                shortcode = MerchantCode,
                 Amount = refundRequest.Amount,
                 currency = refundRequest.Currency,
                 OrderId = refundRequest.OrderId,
@@ -349,59 +409,87 @@ namespace LIB.API.Persistence.Repositories
 
             string jsonPayload = JsonSerializer.Serialize(confirmationPayload);
 
-            using (var httpClient = new HttpClient())
+            try
             {
-                // Add Basic Auth header
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                HttpResponseMessage response = await httpClient.PostAsync(apiUrl, content);
-                string responseString = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
+                using (var httpClient = new HttpClient())
                 {
-                    await LogErrorToAirlinesErrorAsync(
-                        "API Error",
-                        refundRequest.RefundAccountNumber,
-                        "Failed",
-                        responseString,
-                        "ConfirmRefund",
-                        refundRequest.RefundReferenceCode
-                    );
-                    return false;
+                    // Add Basic Auth header
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+                    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                    HttpResponseMessage response = await httpClient.PostAsync(apiUrl, content);
+                    string responseString = await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        await LogErrorToAirlinesErrorAsync(
+                            "API Error",
+                            refundRequest.RefundAccountNumber,
+                            "Failed",
+                            responseString,
+                            "ConfirmRefund",
+                            refundRequest.RefundReferenceCode
+                        );
+        
+                    }
+
+                    var jsonResponse = JsonSerializer.Deserialize<RefundConfirmationResponse>(responseString);
+                    if (jsonResponse == null)
+                    {
+                        await LogErrorToAirlinesErrorAsync(
+                            "Deserialization Error",
+                            refundRequest.RefundAccountNumber,
+                            "Failed",
+                            "Invalid JSON response",
+                            "ConfirmRefund",
+                            refundRequest.RefundReferenceCode
+                        );
+                      
+                    }
+
+                    var confirmRefund = new ConfirmRefund
+                    {
+                        ShortCode = refundRequest.Shortcode ?? "Unknown",
+                        Amount = refundRequest.Amount,
+                        Currency = refundRequest.Currency ?? "N/A",
+                        OrderId = refundRequest.OrderId ?? "N/A",
+                        RefundReferenceCode = refundRequest.RefundReferenceCode ?? "N/A",
+                        RefundAccountNumber = refundRequest.RefundAccountNumber ?? "N/A",
+                        RefundDate = refundRequest.RefundDate.ToString("yyyy-MM-dd") ,
+                        BankRefundReference = refundRequest.BankRefundReference ?? "N/A",
+                        RefundFOP = refundRequest.RefundFOP ?? "N/A",
+                        Status = jsonResponse?.Status == 1 ? "1" : "0",
+                        Remark = refundRequest.Remark ?? "N/A",
+                        AccountHolderName = refundRequest.AccountHolderName ?? "N/A",
+                        ResponseRefundReferenceCode = jsonResponse?.refundReferenceCode ?? "N/A",
+                        ResponseBankRefundReference = jsonResponse?.bankRefundReference ?? "N/A",
+                        ResponseAmount = jsonResponse?.Amount?.ToString() ?? "0",
+                        ResponseStatus = jsonResponse?.Status.ToString() ?? "N/A",
+                        ResponseMessage = jsonResponse?.message ?? "N/A",
+                        CreatedDate = DateTime.UtcNow,
+                    };
+
+                    _context.confirmRefunds.Add(confirmRefund);
+                    await _context.SaveChangesAsync();
+
+                    return jsonResponse.Status == 1;
                 }
-
-                var jsonResponse = JsonSerializer.Deserialize<RefundConfirmationResponse>(responseString);
-
-                var confirmRefund = new ConfirmRefund
-                {
-                    ShortCode = refundRequest.Shortcode,
-                    Amount = refundRequest.Amount,
-                    Currency = refundRequest.Currency,
-                    OrderId = refundRequest.OrderId,
-                    RefundReferenceCode = refundRequest.RefundReferenceCode,
-                    RefundAccountNumber = refundRequest.RefundAccountNumber,
-                    RefundDate = refundRequest.RefundDate.ToString("yyyy-MM-dd"),
-                    BankRefundReference = refundRequest.BankRefundReference,
-                    RefundFOP = refundRequest.RefundFOP,
-                    Status = jsonResponse.Status == 1 ? "1" : "0",
-                    Remark = refundRequest.Remark,
-                    AccountHolderName = refundRequest.AccountHolderName,
-                    ResponseRefundReferenceCode = jsonResponse?.refundReferenceCode,
-                    ResponseBankRefundReference = jsonResponse?.bankRefundReference,
-                    ResponseAmount = jsonResponse?.Amount,
-                    ResponseStatus = jsonResponse.Status,
-                    ResponseMessage = jsonResponse?.message,
-                    CreatedDate = DateTime.UtcNow
-                };
-
-                _context.confirmRefunds.Add(confirmRefund);
-                await _context.SaveChangesAsync();
-
-                return true;
             }
-        }    // Helper methods (GenerateRequestId, GenerateMsgId, etc.)
+            catch (Exception ex)
+            {
+                await LogErrorToAirlinesErrorAsync(
+                    "Exception Occurred",
+                    refundRequest.RefundAccountNumber,
+                    "Failed",
+                    ex.Message,
+                    "ConfirmRefund",
+                    refundRequest.RefundReferenceCode
+                );
+
+                return false;
+            }
+        }
         private string GenerateBankRefundReference()
         {
             return $"REF{DateTime.UtcNow:yyyyMMddHHmmss}{new Random().Next(1000, 9999)}";

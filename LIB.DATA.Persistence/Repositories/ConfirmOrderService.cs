@@ -26,12 +26,12 @@ using Mysqlx.Crud;
             _context = context;
         }
 
-            public async Task<TransactionResponseDto> CreateTransferAsync(decimal Amount, string DAccountNo, string OrderId, string ReferenceNo, string traceNumber, string merchantCode)
+            public async Task<TransactionResponseDto> CreateTransferAsync(decimal Amount, string DAccountNo, string OrderId, string ReferenceNo, string traceNumber)
         {
                 try
                 {
                 // Call repository method to handle the full flow (saving request, calling API, saving response)
-                    return await _confirmOrderRepository.CreateTransferAsync( Amount,  DAccountNo,  OrderId,  ReferenceNo,  traceNumber,  merchantCode);
+                    return await _confirmOrderRepository.CreateTransferAsync( Amount,  DAccountNo,  OrderId,  ReferenceNo,  traceNumber);
             }
             catch (Exception ex)
             {

@@ -41,8 +41,8 @@ namespace LIB.API.Persistence.Repositories
         string DAccountNo,
         string OrderId,
         string ReferenceNo,
-        string traceNumber,
-        string merchantCode)
+        string traceNumber
+  )
         {
             try
             {
@@ -57,8 +57,10 @@ namespace LIB.API.Persistence.Repositories
                 string DAccountBranch = userDetails?.BRANCH;
                 string DAccountName = userDetails?.FULL_NAME;
                 string CAccountNo = "24101900001";
+                string MerchantCode = "526341";
 
-                bool transferSuccess = await CreateTransferAsync(Amount, DAccountNo, DAccountBranch, CAccountNo, ReferenceNo);
+                bool transferSuccess = await CreateTransferAsync(Amount, DAccountNo, DAccountBranch, CAccountNo, ReferenceNo
+       , traceNumber, MerchantCode, OrderId);
 
                 if (!transferSuccess)
                 {
@@ -71,13 +73,13 @@ namespace LIB.API.Persistence.Repositories
                     OrderId = OrderId,
                     Amount = Amount,
                     Currency = "ETB",
-                    Status = 1,
+                    Status = "0",
                     Remark = "Transfer Successful",
                     TraceNumber = traceNumber,
                     ReferenceNumber = ReferenceNo,
                     PaidAccountNumber = DAccountNo,
                     PayerCustomerName = DAccountName,
-                    ShortCode = merchantCode,
+                    ShortCode = MerchantCode,
                     RequestDate = DateTime.UtcNow
                 };
 
@@ -158,7 +160,9 @@ namespace LIB.API.Persistence.Repositories
            string DAccountNo,
            string DAccountBranch,
            string CAccountNo,
-           string RefrenceNo)
+           string RefrenceNo, string TraceNumber,
+           string MerchantCode,
+           string OrderId)
         {
             // Generate unique identifiers for the transfer
             string requestId = GenerateRequestId();
@@ -313,7 +317,7 @@ namespace LIB.API.Persistence.Repositories
             // Handle the SOAP response
             var (isSuccess, reason) = _soapClient.IsSuccessfulResponse(soapResponse);
 
-              // Save transfer data to AirlinesTransferTable
+            // Save transfer data to AirlinesTransferTable
             var transferRecord = new AirlinesTransfer
             {
                 RequestId = RefrenceNo,
@@ -323,12 +327,20 @@ namespace LIB.API.Persistence.Repositories
                 EndToEndId = endToEndId,
                 Amount = Amount,
                 DAccountNo = DAccountNo,
-                CAccountNo = CAccountNo,
                 DAccountBranch = DAccountBranch,
+                CAccountNo = CAccountNo,
+                CAccountName="Airlines Gl",
                 ResponseStatus = isSuccess ? "Success" : "Failed", // Set status based on success or failure
                 TransferDate = DateTime.UtcNow,  // Current timestamp for when the transfer was initiated
-                   ErrorReason = isSuccess ? null : reason  // Store error message if the transfer fails
+                OrderId = OrderId,
+                ReferenceNo = RefrenceNo,
+                TraceNumber = TraceNumber,
+                MerchantCode = MerchantCode,
+                ErrorReason = reason,// Set status based on success or failure,
+                IsSuccessful=isSuccess,
             };
+    
+    
      if (!isSuccess)
             {
                 // Log the error if the response is not successful

@@ -22,7 +22,7 @@ namespace LIB.API.Domain
     public class RefundConfirmationRequest
     {
         public string Shortcode { get; set; }
-        public decimal Amount { get; set; }
+        public string Amount { get; set; }
         public string Currency { get; set; }
         public string OrderId { get; set; }
         public string RefundReferenceCode { get; set; }
@@ -30,7 +30,7 @@ namespace LIB.API.Domain
         public DateTime RefundDate { get; set; }
         public string BankRefundReference { get; set; }
         public string RefundFOP { get; set; }
-        public int Status { get; set; }  // 1 for Success, 0 for Failure
+        public string Status { get; set; }  // 1 for Success, 0 for Failure
         public string Remark { get; set; }
         public string AccountHolderName { get; set; }
     }

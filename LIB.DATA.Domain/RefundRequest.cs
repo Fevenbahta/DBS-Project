@@ -10,7 +10,7 @@ namespace LIB.API.Domain
     {
         public decimal Amount { get; set; }
         public string Currency { get; set; }
-        public string ShortCode { get; set; }
+ 
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string OrderId { get; set; }
