@@ -21,22 +21,43 @@ public class AuthController : ControllerBase
     /// Generates a JWT token using username and password
     /// </summary>
     [HttpPost("GenerateToken")]
-    public IActionResult GenerateToken([FromBody] LoginRequest request)
+    public IActionResult GenerateToken()
     {
-        if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+        if (!Request.Headers.ContainsKey("Authorization"))
         {
-            return BadRequest(new { Message = "Username and password are required." });
+            return Unauthorized(new { Message = "Authorization header is missing" });
         }
 
-        // Dummy authentication - Replace with actual user validation
-        if (request.Username == "admin" && request.Password == "password")
+        var authHeader = Request.Headers["Authorization"].ToString();
+        if (!authHeader.StartsWith("Basic "))
         {
-            var token = CreateToken(request.Username);
+            return Unauthorized(new { Message = "Invalid authorization scheme" });
+        }
+
+        // Decode Base64-encoded credentials
+        var encodedCredentials = authHeader.Substring("Basic ".Length).Trim();
+        var credentials = Encoding.UTF8.GetString(Convert.FromBase64String(encodedCredentials));
+
+        // Split into username and password
+        var parts = credentials.Split(':', 2);
+        if (parts.Length != 2)
+        {
+            return Unauthorized(new { Message = "Invalid credentials format" });
+        }
+
+        string username = parts[0];
+        string password = parts[1];
+
+        // Dummy authentication - Replace with actual user validation
+        if (username == "LibET_SecureUser_2024_XYZ!@#" && password == "LibET@2024!SuperSecure#X9%^&*A1b2C3d4E5")
+        {
+            var token = CreateToken(username);
             return Ok(new { Token = token });
         }
 
         return Unauthorized(new { Message = "Invalid username or password" });
     }
+
 
     /// <summary>
     /// Creates the JWT token

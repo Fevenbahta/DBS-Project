@@ -287,13 +287,13 @@ else
 }
 
 
-//app.UseDeveloperExceptionPage();
-//app.UseSwagger(); // Make sure this is present
-//app.UseSwaggerUI(c =>
-//{
-//    c.SwaggerEndpoint("/swagger/v3/swagger.json", "Transfers Connector APIs v3"); // Correct endpoint
-//    c.RoutePrefix = string.Empty; // Optional: set Swagger UI at the app's root
-//});
+app.UseDeveloperExceptionPage();
+app.UseSwagger(); // Make sure this is present
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v3/swagger.json", "Transfers Connector APIs v3"); // Correct endpoint
+    c.RoutePrefix = string.Empty; // Optional: set Swagger UI at the app's root
+});
 
 app.UseHttpsRedirection();
 //app.UseStaticFiles();

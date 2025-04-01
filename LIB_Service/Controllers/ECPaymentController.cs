@@ -110,7 +110,12 @@ namespace LIB.API.Controllers
 
 
                 }
-                return Ok( response );
+                var result = new
+                {
+                    status = status,
+                    response = response
+                };
+                return Ok(result);
             }
             catch (Exception ex)
             {

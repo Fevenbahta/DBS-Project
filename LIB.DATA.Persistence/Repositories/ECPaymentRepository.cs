@@ -127,7 +127,7 @@ namespace LIB.API.Persistence.Repositories
                         <amp:requestHeader>
                             <amp:requestId>req12</amp:requestId>
                             <amp:serviceName>createECPaymentV2</amp:serviceName>
-                            <amp:timestamp>2025-03-20T13:52:01</amp:timestamp>
+                          <amp:timestamp>{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss}</amp:timestamp>
                             <amp:originalName>TELEBIRR</amp:originalName>
                             <amp:languageCode>002</amp:languageCode>
                             <amp:userCode>TELEBIRR</amp:userCode>
