@@ -14,8 +14,12 @@ namespace LIB.API.Domain
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto-generate ID
         public int Id { get; set; }
+        public string? BillerType { get; set; }
+        public string? PhoneNumber { get; set; }
+   
+        public string? AccountNo { get; set; }
 
-       
+
         public string OrderId { get; set; }
 
         public string ShortCode { get; set; }

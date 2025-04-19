@@ -32,7 +32,7 @@ namespace LIB.API.Domain
         public List<string> ResProviderId { get; set; }
 
         // Changing from int to List<int> for InvoiceId
-        public List<int> InvoiceId { get; set; }
+        public List<string> InvoiceId { get; set; }
 
         // Changing from string to List<string> for InvoiceIdentificationValue
         public List<string> InvoiceIdentificationValue { get; set; }

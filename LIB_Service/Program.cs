@@ -272,19 +272,19 @@ app.UseAuthentication();
 
 //app.UseMiddleware<ErrorHandlingMiddleware>();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v3/swagger.json", "Transfers Connector APIs v3"));
+//Configure the HTTP request pipeline.
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseDeveloperExceptionPage();
+//app.UseSwagger();
+//app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v3/swagger.json", "Transfers Connector APIs v3"));
 
-}
-else
-{
-    app.UseExceptionHandler("/Error");
-    app.UseHsts();
-}
+//}
+//else
+//{
+//    app.UseExceptionHandler("/Error");
+//    app.UseHsts();
+//}
 
 
 app.UseDeveloperExceptionPage();

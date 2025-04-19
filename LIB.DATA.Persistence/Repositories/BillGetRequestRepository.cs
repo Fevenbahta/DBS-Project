@@ -39,7 +39,7 @@ namespace LIB.API.Persistence.Repositories
                 UniqueCode = billGetRequestDto.UniqueCode ?? "",
                 PhoneNumber = billGetRequestDto.PhoneNumber ?? "",
                 ReferenceNo = billGetRequestDto.ReferenceNo,
-                ReqTransactionDate = billGetRequestDto.TransactionDate,
+                ReqTransactionDate = DateTime.UtcNow,
                 AccountNo = billGetRequestDto.AccountNo ?? "",
                 ResTransactionDate = DateTime.UtcNow
             };
@@ -61,7 +61,7 @@ namespace LIB.API.Persistence.Repositories
                     billGetRequest.Status = status;
                     billGetRequest.ResponseError = soapResponse; // Store raw response for troubleshooting if necessary
                     billGetRequest.ResProviderId = new List<string> { providerId };
-                    billGetRequest.InvoiceId = new List<int> { invoiceId };
+                    billGetRequest.InvoiceId = new List<string> { invoiceId };
                     billGetRequest.InvoiceIdentificationValue = new List<string> { invoiceIdentificationValue };
                     billGetRequest.InvoiceAmount = new List<decimal> { invoiceAmount };
                     billGetRequest.CurrencyAlphaCode = new List<string> { currencyAlphaCode };
@@ -74,7 +74,7 @@ namespace LIB.API.Persistence.Repositories
                     await _context.SaveChangesAsync();
 
                     // Add each parsed response to the response list
-                    if (status=="0") {      responseList.Add(new BillGetResponseDto
+                    if (status=="0" ) {      responseList.Add(new BillGetResponseDto
                     {
                         Status = status,
                         ProviderId = providerId,
@@ -314,7 +314,7 @@ namespace LIB.API.Persistence.Repositories
                         var invoice = new BillGetResponseDto
                         {
                             ProviderId = invoiceNode.SelectSingleNode("fjs1:providerId", nsManager)?.InnerText ?? string.Empty,
-                            InvoiceId = int.TryParse(invoiceNode.SelectSingleNode("fjs1:invoiceId", nsManager)?.InnerText, out var parsedInvoiceId) ? parsedInvoiceId : 0,
+                            InvoiceId = invoiceNode.SelectSingleNode("fjs1:invoiceId", nsManager)?.InnerText?? string.Empty,
                             InvoiceAmount = decimal.TryParse(invoiceNode.SelectSingleNode("fjs1:invoiceAmount/fjs1:amount1", nsManager)?.InnerText, out var parsedAmount) ? parsedAmount : 0.00m,
                             CurrencyAlphaCode = invoiceNode.SelectSingleNode("fjs1:invoiceAmount/fjs1:currency/fjs1:currency/fjs1:alphaCode", nsManager)?.InnerText ?? string.Empty,
                             CurrencyDesignation = invoiceNode.SelectSingleNode("fjs1:invoiceAmount/fjs1:currency/fjs1:currency/fjs1:designation", nsManager)?.InnerText ?? string.Empty,
@@ -341,7 +341,7 @@ namespace LIB.API.Persistence.Repositories
         }
         
 
-        private string ParseSoapResponseWithProviderIdAndUniqueCode(string soapResponse, out string providerId, out int invoiceId,
+        private string ParseSoapResponseWithProviderIdAndUniqueCode(string soapResponse, out string providerId, out string invoiceId,
                          out string invoiceIdentificationValue, out decimal invoiceAmount,
                          out string currencyAlphaCode, out string currencyDesignation, out string customerName, out string providerName,out string uniqueCode)
         {
@@ -355,7 +355,7 @@ namespace LIB.API.Persistence.Repositories
 
             // Initialize output variables
             providerId = string.Empty;
-            invoiceId = 0;
+            invoiceId = string.Empty;
             invoiceIdentificationValue = string.Empty;
             invoiceAmount = 0.00m;
             currencyAlphaCode = string.Empty;
@@ -374,7 +374,7 @@ namespace LIB.API.Persistence.Repositories
                 if (invoiceNode != null)
                 {
                     providerId = xmlDoc.SelectSingleNode("//fjs1:getECInvoiceDetailResponse/fjs1:providerId", nsManager)?.InnerText ?? string.Empty;
-                    invoiceId = int.TryParse(invoiceNode.InnerText, out var parsedInvoiceId) ? parsedInvoiceId : 0;
+                     invoiceId = invoiceNode?.InnerText?.Trim() ?? string.Empty;
 
                     var invoiceAmountNode = xmlDoc.SelectSingleNode("//fjs1:getECInvoiceDetailResponse/fjs1:invoiceAmount/fjs1:amount", nsManager);
                     invoiceAmount = decimal.TryParse(invoiceAmountNode?.InnerText, out var parsedAmount) ? parsedAmount : 0.00m;

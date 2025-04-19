@@ -24,7 +24,7 @@ namespace LIB.API.Persistence.Repositories
 
         public async Task<OrderResponseDto?> FetchOrderAsync(OrderRequestDto request)
         {
-            return await _orderRepository.GetOrderAsync(request.OrderId,request.ReferenceId);
+            return await _orderRepository.GetOrderAsync( request);
         }
         public async Task<bool> IsReferenceNoUniqueAsync(string referenceNo)
         {

@@ -61,6 +61,25 @@ namespace LIB.API.Persistence.Repositories
             // Parse the SOAP response
             var responseObj = XElement.Parse(responseXml);
 
+            // Check if the response contains a SOAP fault
+            var faultNode = responseObj.Descendants().FirstOrDefault(e => e.Name.LocalName == "Fault");
+            if (faultNode != null)
+            {
+                // Extract error details from the SOAP fault response
+                var faultCode = faultNode.Descendants().FirstOrDefault(e => e.Name.LocalName == "Value")?.Value ?? "Unknown Fault Code";
+                var faultSubcode = faultNode.Descendants().FirstOrDefault(e => e.Name.LocalName == "Subcode")?.Value ?? "Unknown Subcode";
+                var faultReason = faultNode.Descendants().FirstOrDefault(e => e.Name.LocalName == "Text")?.Value ?? "No fault reason provided";
+
+                string fullErrorMessage = $"SOAP Fault Detected: Code = {faultCode}, Subcode = {faultSubcode}, Reason = {faultReason}";
+
+                // Save error to database
+                await SaveErrorToBillErrorAsync(request?.ReferenceNo, fullErrorMessage, "SOAP Fault", "ECPaymentRequestAsync");
+
+                // Throw an exception with detailed SOAP error message
+                throw new Exception(fullErrorMessage);
+            }
+
+            // Proceed with normal XML response parsing
             var statusCodeNode = responseObj.Descendants().FirstOrDefault(e => e.Name.LocalName == "statusCode");
             string statusCode = statusCodeNode?.Value ?? "Unknown";
 
@@ -70,14 +89,14 @@ namespace LIB.API.Persistence.Repositories
             string responseError = "No error";
 
             // Check if statusCode is -1 (indicating an error)
-            if (statusCode == "-1")
+            if (statusCode == "-1" )
             {
                 var errorMessageNode = responseObj.Descendants().FirstOrDefault(e => e.Name.LocalName == "line");
                 responseError = errorMessageNode?.Value ?? "Unknown error occurred";
-                await SaveErrorToBillErrorAsync(request?.ReferenceNo, responseError, "Exception", "EcpaymentrequestAsync");
+
+                await SaveErrorToBillErrorAsync(request?.ReferenceNo, responseError, "Exception", "ECPaymentRequestAsync");
 
                 throw new Exception(responseError);
-
             }
             else
             {
@@ -91,21 +110,24 @@ namespace LIB.API.Persistence.Repositories
                 responseError = "No error";
             }
 
+            // Save the response record
             var paymentRecord = new ECPaymentRecords
             {
+                CustomerCode = request.CustomerCode,
+                BillerType = request.BillerType,
                 InvoiceId = request.InvoiceId,
                 ReferenceNo = request.ReferenceNo,
                 CustomerId = request.CustomerId,
                 Reason = request.Reason,
                 PaymentAmount = request.PaymentAmount,
-                PaymentDate = request.PaymentDate,
+                PaymentDate = DateTime.UtcNow,
                 Branch = request.Branch,
                 Currency = "001",
                 AccountNo = request.AccountNo,
                 ProviderId = request.ProviderId,
                 Status = status,  // Store the extracted payment status
-                ResponseId = paymentId,  // Store the extracted payment ID,
-                ResponseError= responseError,
+                ResponseId = paymentId,  // Store the extracted payment ID
+                ResponseError = responseError,
                 Response = responseObj.ToString(),
             };
 
@@ -143,7 +165,7 @@ namespace LIB.API.Persistence.Repositories
                             </amp:debitedAccount>
                             <amp:reason>{request.Reason}</amp:reason>
                             <amp:paymentAmount>{request.PaymentAmount}</amp:paymentAmount>
-                            <amp:paymentDate>{request.PaymentDate:yyyy-MM-dd}</amp:paymentDate>
+                            <amp:paymentDate>{DateTime.UtcNow:yyyy-MM-dd}</amp:paymentDate>
                             <amp:inputBranchCode>{request.Branch}</amp:inputBranchCode>
                             <amp:paymentChannelIdentification>
                                 <amp:paymentUseChannel>5</amp:paymentUseChannel>
@@ -241,6 +263,52 @@ namespace LIB.API.Persistence.Repositories
             return existingRequest == null; // Return true if not found, false otherwise
         }
 
+
+
+
+        public async Task<string> AddECPaymentRequestAsync(ECPaymentRequestDTO request)
+        {
+            try
+            {
+                // Check if the reference number is unique before saving the request
+                bool isUnique = await IsReferenceNoUniqueAsync(request.ReferenceNo);
+                if (!isUnique)
+                {
+                    return "ReferenceNo already exists in the database.";
+                }
+
+                // Create a new ECPaymentRecords entry with the request details
+                var paymentRecord = new ECPaymentRecords
+                {
+                    CustomerCode = request.CustomerCode,
+                    BillerType = request.BillerType,
+                    InvoiceId = request.InvoiceId,
+                    ReferenceNo = request.ReferenceNo,
+                    CustomerId = request.CustomerId,
+                    Reason = request.Reason,
+                    PaymentAmount = request.PaymentAmount,
+                    PaymentDate = DateTime.UtcNow,
+                    Branch = request.Branch,
+                    Currency = "001", // Assuming default currency
+                    AccountNo = request.AccountNo,
+                    ProviderId = request.ProviderId,
+                    Status = "Pending", // Set status to Pending when the request is added
+                    ResponseError = "No error",
+                    Response = string.Empty, // No response yet
+                };
+
+                _context.ECPaymentRecords.Add(paymentRecord);
+                await _context.SaveChangesAsync();
+
+                return "Request added successfully to the database.";
+            }
+            catch (Exception ex)
+            {
+                // Log any errors that occur during saving the request
+                await SaveErrorToBillErrorAsync(request.ReferenceNo, ex.Message, ex.GetType().Name, request.ReferenceNo);
+                return "Error occurred while adding the request to the database.";
+            }
+        }
 
         private async Task LogErrorToAirlinesErrorAsync(string methodName, string orderId, string errorMessage, string errorType, string refrence)
         {

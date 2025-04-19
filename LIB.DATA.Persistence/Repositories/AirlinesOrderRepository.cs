@@ -25,7 +25,7 @@ namespace LIB.API.Persistence.Repositories
             _dbContext = dbContext;
         }
 
-        public async Task<OrderResponseDto?> GetOrderAsync(string orderId,string refrence)
+        public async Task<OrderResponseDto?> GetOrderAsync(OrderRequestDto OrderRequestDtorequest)
         {
             try
             {
@@ -34,10 +34,13 @@ namespace LIB.API.Persistence.Repositories
                 // Save request data to the database first
                 var airlinesOrderRequest = new AirlinesOrder
                 {
-                    OrderId = orderId,
+                    OrderId = OrderRequestDtorequest.OrderId,
                     ShortCode = shortCode,
-                    ReferenceId= refrence,
-                    RequestDate = DateTime.UtcNow
+                    ReferenceId= OrderRequestDtorequest.ReferenceId,
+                    RequestDate = DateTime.UtcNow,    
+                    BillerType= OrderRequestDtorequest.BillerType,
+                    PhoneNumber = OrderRequestDtorequest.PhoneNumber,
+                    AccountNo = OrderRequestDtorequest.AccountNo
                 };
 
                 _dbContext.airlinesorder.Add(airlinesOrderRequest);
@@ -45,7 +48,7 @@ namespace LIB.API.Persistence.Repositories
 
                 // Use the provided public URL for the API
                 string baseUrl = "https://ethiopiangatewaytest.azurewebsites.net";
-                string url = $"{baseUrl}/Lion/api/V1.0/Lion/GetOrder?orderId={orderId}&shortCode={shortCode}";
+                string url = $"{baseUrl}/Lion/api/V1.0/Lion/GetOrder?orderId={OrderRequestDtorequest.OrderId}&shortCode={shortCode}";
 
                 // Encode username and password for Basic Authentication
                 string username = "lionbanktest@ethiopianairlines.com";
@@ -118,7 +121,7 @@ namespace LIB.API.Persistence.Repositories
             {
                 // Handle any errors that occur during the process
                 // Log the error to the AirlinesErrors table
-                await LogErrorToAirlinesErrorAsync("GetOrderAsync", orderId, ex.Message, orderId, refrence);
+                await LogErrorToAirlinesErrorAsync("GetOrderAsync", OrderRequestDtorequest.OrderId, ex.Message, OrderRequestDtorequest.OrderId, OrderRequestDtorequest.ReferenceId);
 
                 // Rethrow the exception to allow it to be handled elsewhere
                 throw new Exception("Error occurred while getting the order.", ex);

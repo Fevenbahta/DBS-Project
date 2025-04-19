@@ -35,7 +35,7 @@ namespace LIB.API.Persistence.Repositories
             {
 
             var transaction = await _context.airlinestransfer
-                .FirstOrDefaultAsync(t => t.ReferenceNo == refundRequest.RefundReferenceCode
+                .FirstOrDefaultAsync(t => t.ReferenceNo == refundRequest.ReferenceNumber
                                         && t.ResponseStatus == "Success"
                                         && t.MerchantCode == MerchantCode
                                         && t.OrderId == refundRequest.OrderId);
@@ -43,13 +43,13 @@ namespace LIB.API.Persistence.Repositories
             if (transaction == null)
             {
                 await LogErrorToAirlinesErrorAsync("ReferenceNotFound", refundRequest.RefundAccountNumber, "Reference number not found in AirlinesTransaction", "", "ProcessRefund", refundRequest.ReferenceNumber);
-                throw new Exception("Reference number not found or status is not 'success' in AirlinesTransaction.");
+                throw new Exception("Payment Reference number does not exsist ");
             }
 
 
             // Step 2: Check if the transaction amount is less than the sum of the refund amount + requested refund amount
             var refunds = await _context.refunds
-      .Where(r => r.RefundReferenceCode == refundRequest.RefundReferenceCode
+      .Where(r => r.ReferenceNumber == refundRequest.ReferenceNumber
        && r.OrderId == refundRequest.OrderId
                 && r.ShortCode ==MerchantCode)
       .OrderByDescending(r => r.TransferDate)  // Get latest refunds first
@@ -60,6 +60,19 @@ namespace LIB.API.Persistence.Repositories
             decimal totalRefundedAmount = refunds.Sum(r => r.Amount);
 
             // Check if the new refund request exceeds the transaction amount
+            if (totalRefundedAmount == transaction.Amount)
+            {
+                await LogErrorToAirlinesErrorAsync(
+                    "Request Already Refunded",
+                    refundRequest.RefundAccountNumber,
+                    "Request Already Refunded",
+                    "",
+                    "ProcessRefund",
+                    refundRequest.ReferenceNumber
+                );
+
+                throw new Exception("Request Already Refunded.");
+            }
             if (totalRefundedAmount + refundRequest.Amount > transaction.Amount)
             {
                 await LogErrorToAirlinesErrorAsync(
@@ -89,21 +102,21 @@ namespace LIB.API.Persistence.Repositories
 
 
             // Call the CreateTransferAsync method to process the SOAP request
-            var userDetails = await _detailRepository.GetUserDetailsByAccountNumberAsync(refundRequest.RefundAccountNumber);
+            //var userDetails = await _detailRepository.GetUserDetailsByAccountNumberAsync(transaction.DAccountNo);
 
-            if (userDetails == null || string.IsNullOrEmpty(userDetails.BRANCH))
-            {
-                await LogErrorToAirlinesErrorAsync("UserDetailsCheck", refundRequest.RefundAccountNumber, "Account Number  is Invalid", "", "CreateTransfer", refundRequest.ReferenceNumber);
-                throw new Exception("User Account Number  is Invalid. Transaction aborted.");
-            }
+            ////if (userDetails == null || string.IsNullOrEmpty(userDetails.BRANCH))
+            //{
+            //    await LogErrorToAirlinesErrorAsync("UserDetailsCheck", refundRequest.RefundAccountNumber, "Account Number  is Invalid", "", "CreateTransfer", refundRequest.ReferenceNumber);
+            //    throw new Exception("User Account Number  is Invalid. Transaction aborted.");
+            //}
 
-            string CAccountBranch = userDetails?.BRANCH;
+            string CAccountBranch = transaction?.DAccountBranch;
 
 
             string dAccountBranch ="00003";
             string DAccountNo = "00312365168";
 
-                bool isTransferSuccess = await CreateTransferAsync(refundRequest.Amount, DAccountNo, dAccountBranch, refundRequest.RefundAccountNumber, CAccountBranch, refundRequest.RefundReferenceCode, refundRequest);
+                bool isTransferSuccess = await CreateTransferAsync(refundRequest.Amount, DAccountNo, dAccountBranch, transaction.DAccountNo, CAccountBranch, refundRequest.RefundReferenceCode, refundRequest);
 
                 if (!isTransferSuccess)
                 {
@@ -292,7 +305,7 @@ namespace LIB.API.Persistence.Repositories
                     FirstName = refundRequest.FirstName,
                     LastName = refundRequest.LastName,
                     OrderId = refundRequest.OrderId,
-                    RefundAccountNumber = refundRequest.RefundAccountNumber,
+                    RefundAccountNumber = CAccountNo,
                     RefundFOP = refundRequest.RefundFOP,
                     RefundReferenceCode = refundRequest.RefundReferenceCode,
                     ReferenceNumber = refundRequest.ReferenceNumber,
@@ -534,7 +547,7 @@ namespace LIB.API.Persistence.Repositories
         {
             // Check if the ReferenceNo already exists in the database
             var existingRequest = await _context.refunds
-                .FirstOrDefaultAsync(b => b.ReferenceNumber == referenceNo);
+                .FirstOrDefaultAsync(b => b.RefundReferenceCode == referenceNo);
 
             return existingRequest == null; // Return true if not found, false otherwise
         }

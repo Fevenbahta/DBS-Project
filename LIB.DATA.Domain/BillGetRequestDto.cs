@@ -14,7 +14,7 @@ namespace LIB.API.Domain
         public string UniqueCode { get; set; }
         public string PhoneNumber { get; set; }
         public string ReferenceNo { get; set; }
-        public DateTime TransactionDate { get; set; }
+      
         public string AccountNo { get; set; }
     }
 

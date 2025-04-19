@@ -39,135 +39,49 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 
                 List<string> errorMessages = new List<string>();
 
-                // Manually validate each property
-                if (request.Amount <= 0)
-                {
-                    errorMessages.Add("Amount must be greater than zero.");
-                }
+                // Validate each property
+                if (request.Amount <= 0) errorMessages.Add("Invalid Amount");
+                if (string.IsNullOrEmpty(request.Currency) || request.Currency.Length != 3) errorMessages.Add("Currency must be a 3-letter code.");
+                if (string.IsNullOrEmpty(request.FirstName)) errorMessages.Add("First Name is required.");
+                if (string.IsNullOrEmpty(request.LastName)) errorMessages.Add("Last Name is required.");
+                if (string.IsNullOrEmpty(request.OrderId)) errorMessages.Add("Order ID is required.");
+                if (string.IsNullOrEmpty(request.RefundFOP)) errorMessages.Add("Refund FOP (Form of Payment) is required.");
+                if (string.IsNullOrEmpty(request.RefundReferenceCode)) errorMessages.Add("Refund Reference Code is required.");
+                if (string.IsNullOrEmpty(request.ReferenceNumber)) errorMessages.Add("Reference Number is required.");
 
-                if (string.IsNullOrEmpty(request.Currency) || request.Currency.Length != 3)
-                {
-                    errorMessages.Add("Currency must be a 3-letter code.");
-                }
+                bool isReferenceNoUnique = await _refundRepository.IsReferenceNoUniqueAsync(request.RefundReferenceCode);
+                if (!isReferenceNoUnique) errorMessages.Add("Error: Request Already Exist.");
 
-                if (string.IsNullOrEmpty(request.FirstName))
-                {
-                    errorMessages.Add("First Name is required.");
-                }
-
-                if (string.IsNullOrEmpty(request.LastName))
-                {
-                    errorMessages.Add("Last Name is required.");
-                }
-
-                if (string.IsNullOrEmpty(request.OrderId))
-                {
-                    errorMessages.Add("Order ID is required.");
-                }
-
-                if (string.IsNullOrEmpty(request.RefundAccountNumber))
-                {
-                    errorMessages.Add("Refund Account Number is required.");
-                }
-
-                if (string.IsNullOrEmpty(request.RefundFOP))
-                {
-                    errorMessages.Add("Refund FOP (Form of Payment) is required.");
-                }
-
-                if (string.IsNullOrEmpty(request.RefundReferenceCode))
-                {
-                    errorMessages.Add("Refund Reference Code is required.");
-                }
-
-                if (string.IsNullOrEmpty(request.ReferenceNumber))
-                {
-                    errorMessages.Add("Reference Number is required.");
-                }
-
-                bool isReferenceNoUnique = await _refundRepository.IsReferenceNoUniqueAsync(request.ReferenceNumber);
-                if (!isReferenceNoUnique)
-                {
-                    errorMessages.Add("Error: ReferenceNo must be unique.");
-                }
-
-                // If there are any validation errors, return a bad request response with the errors
+                // If validation fails, return structured error response
                 if (errorMessages.Any())
                 {
                     return BadRequest(new
                     {
-                        returnCode = "ERROR",
-                        ticketId = Guid.NewGuid().ToString(),
-                        traceId = request.ReferenceNumber,
-                        feedbacks = new[]
-                        {
-                    new
-                    {
-                        code = "SB_DS_001",
-                        label = "Validation failed",
-                        severity = "ERROR",
-                        type = "SYS",
-                        source = "Refund Request",
-                        origin = "RefundController",
-                        spanId = HttpContext.TraceIdentifier,
-                        parameters = errorMessages.Select(msg => new { code = "0", value = msg }).ToArray()
-                    }
-                }
-                    });
-                }
-
-                // Call the repository method to process the refund
-                bool isRefundProcessed = await _refundRepository.ProcessRefundAsync(request);
-
-                if (isRefundProcessed)
-                {
-                    // Success response
-                    return Ok(new
-                    {
-                        ResponseCode = 1,
-                        ResponseCodeDescription = "Successfully Refunded",
-                        Status = "Success"
-                    });
-                }
-                else
-                {
-                    // Failure response
-                    return Ok(new
-                    {
                         ResponseCode = 0,
-                        ResponseCodeDescription = "Refund processing failed due to an error",
+                        ResponseCodeDescription = string.Join("; ", errorMessages), // Combine errors into a single string
                         Status = "Failure"
                     });
                 }
+
+                // Process the refund
+                bool isRefundProcessed = await _refundRepository.ProcessRefundAsync(request);
+                return Ok(new
+                {
+                    ResponseCode = isRefundProcessed ? 1 : 0,
+                    ResponseCodeDescription = isRefundProcessed ? "Successfully Refunded" : "Refund processing failed due to an error",
+                    Status = isRefundProcessed ? "Success" : "Failure"
+                });
             }
             catch (Exception ex)
             {
-                // Log the error (consider using a logging framework like Serilog)
-                Console.WriteLine($"Exception in ProcessRefund: {ex.Message}");
+                // Log the error properly
+                Console.WriteLine($"Exception in ProcessRefund: {ex.Message}"); // Replace with ILogger
 
-                // Return a structured error response
                 return StatusCode(500, new
                 {
-                    returnCode = "ERROR",
-                    ticketId = Guid.NewGuid().ToString(),
-                    traceId = request?.ReferenceNumber ?? "Unknown",
-                    feedbacks = new[]
-                    {
-                new
-                {
-                    code = "SB_DS_500",
-                    label = ex.Message ,
-                    severity = "ERROR",
-                    type = "SYS",
-                    source = "Refund Request",
-                    origin = "RefundController",
-                    spanId = HttpContext.TraceIdentifier,
-                    parameters = new[]
-                    {
-                        new { code = "EXCEPTION", value = ex.Message }
-                    }
-                }
-            }
+                    ResponseCode = 0,
+                    ResponseCodeDescription = "An internal server error occurred: " + ex.Message,
+                    Status = "Failure"
                 });
             }
         }

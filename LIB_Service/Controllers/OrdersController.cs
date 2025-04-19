@@ -32,105 +32,68 @@ namespace LIB.API.Controllers
 
         [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]  // Ensures the endpoint requires a valid token
 
-        [HttpGet("get-order")]
-        public async Task<IActionResult> GetOrder([FromQuery] OrderRequestDto request)
+        [HttpPost("get-order")]
+        public async Task<IActionResult> GetOrder([FromBody] OrderRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.OrderId)  || string.IsNullOrWhiteSpace(request.ReferenceId))
+            if (request == null || string.IsNullOrWhiteSpace(request.OrderId) || string.IsNullOrWhiteSpace(request.ReferenceId))
             {
-                // Log the error into the AirlinesError table and return the BadRequest response
-
-
-
-                await SaveErrorToAirlinesErrorAsync(request.OrderId, "OrderId is required.", "GetOrder", request.ReferenceId);
-
-                return BadRequest(new
-                {
-                    returnCode = "ERROR",
-                    ticketId = Guid.NewGuid().ToString(),  // You can generate a unique ticket ID for each error
-                    traceId = HttpContext.TraceIdentifier,
-                    feedbacks = new[]
-                    {
-                        new
-                        {
-                            code = "SB_DS_001",
-                            label = "OrderId  is required.",
-                            severity = "ERROR",
-                            type = "BUS",
-                            source = "Request Validation",
-                            origin = "OrdersController",
-                            spanId = HttpContext.TraceIdentifier,
-                            parameters = new[]
-                            {
-                                new { code = "0", value = "Invalid Input" }
-                            }
-                        }
-                    }
-                });
+                await SaveErrorToAirlinesErrorAsync(request?.OrderId, "OrderId is required.", "GetOrder", request?.ReferenceId);
+                return BadRequest(GenerateErrorResponse("SB_DS_001", "OrderId is required.", "Request Validation", "Invalid Input"));
             }
 
             bool isReferenceNoUnique = await _orderService.IsReferenceNoUniqueAsync(request.ReferenceId);
             if (!isReferenceNoUnique)
             {
-                         await SaveErrorToAirlinesErrorAsync(request.OrderId, "Error: ReferenceNo must be unique.", "GetOrder", request.ReferenceId);
-
-                return NotFound(new
-                {
-                    returnCode = "ERROR",
-                    ticketId = Guid.NewGuid().ToString(),
-                    traceId = HttpContext.TraceIdentifier,
-                    feedbacks = new[]
-                    {
-                        new
-                        {
-                            code = "SB_DS_002",
-                            label = "Error: ReferenceNo must be unique.",
-                            severity = "ERROR",
-                            type = "BUS",
-                            source = "GetOrder",
-                            origin = "OrdersController",
-                            spanId = HttpContext.TraceIdentifier,
-                            parameters = new[]
-                            {
-                                new { code = "0", value = "ReferenceNo not unique" }
-                            }
-                        }
-                    }
-                });
-
+                await SaveErrorToAirlinesErrorAsync(request.OrderId, "Error: ReferenceNo must be unique.", "GetOrder", request.ReferenceId);
+                return NotFound(GenerateErrorResponse("SB_DS_002", "Error: ReferenceNo must be unique.", "GetOrder", "ReferenceNo not unique"));
             }
- 
+
             var order = await _orderService.FetchOrderAsync(request);
             if (order == null)
             {
-                // Log the error into the AirlinesError table and return the NotFound response
-                await SaveErrorToAirlinesErrorAsync(request.OrderId,"Order not found or failed to fetch.", "GetOrder", request.ReferenceId);
-
-                return NotFound(new
-                {
-                    returnCode = "ERROR",
-                    ticketId = Guid.NewGuid().ToString(),
-                    traceId = HttpContext.TraceIdentifier,
-                    feedbacks = new[]
-                    {
-                        new
-                        {
-                            code = "SB_DS_002",
-                            label = "Order not found or failed to fetch.",
-                            severity = "ERROR",
-                            type = "BUS",
-                            source = "Order Fetching",
-                            origin = "OrdersController",
-                            spanId = HttpContext.TraceIdentifier,
-                            parameters = new[]
-                            {
-                                new { code = "0", value = "Order not found" }
-                            }
-                        }
-                    }
-                });
+                await SaveErrorToAirlinesErrorAsync(request.OrderId, "Order not found or failed to fetch.", "GetOrder", request.ReferenceId);
+                return NotFound(GenerateErrorResponse("SB_DS_003", "Order not found or failed to fetch.", "Order Fetching", "Order not found"));
             }
-           return Ok(order);
+
+            // If order is Expired (2), Already Paid (3), or Pending (1), return the error format
+            if (order.StatusCodeResponse != 0)
+            {
+                return BadRequest(GenerateErrorResponse("SB_DS_004", $"Order is {order.StatusCodeResponseDescription}.", "Order Processing", order.OrderId));
+            }
+
+            return Ok(order);
         }
+
+        private object GenerateErrorResponse(string errorCode, string message, string source, string parameterValue)
+        {
+            return new
+            {
+                returnCode = "ERROR",
+                ticketId = Guid.NewGuid().ToString(),
+                traceId = HttpContext.TraceIdentifier,
+                feedbacks = new[]
+                {
+            new
+            {
+                code = errorCode,
+                label = message,
+                severity = "ERROR",
+                type = "BUS",
+                source = source,
+                origin = "OrdersController",
+                spanId = HttpContext.TraceIdentifier,
+                parameters = new[]
+                {
+                    new { code = "0", value = parameterValue }
+                }
+            }
+        }
+            };
+        }
+
+
+
+
 
         // Confirm Order
 
@@ -138,43 +101,18 @@ namespace LIB.API.Controllers
 
         [AllowAnonymous]
         [HttpPost("CreateTransfer")]
+
         public async Task<IActionResult> CreateTransfer([FromBody] CreateBody body)
         {
             ModelState.Clear();
-            // Initialize a list to collect error messages
             List<string> errorMessages = new List<string>();
 
-            // Manually validate each property of the CreateBody model
-            if (body.Amount <= 0)
-            {
-                errorMessages.Add("Amount must be greater than zero.");
-            }
-       
-
-            if (string.IsNullOrEmpty(body.DAccountNo))
-            {
-                errorMessages.Add("DAccountNo is required.");
-            }
-
-            if (string.IsNullOrEmpty(body.OrderId))
-            {
-                errorMessages.Add("OrderId is required.");
-            }
-
-            if (string.IsNullOrEmpty(body.ReferenceNo))
-            {
-                errorMessages.Add("ReferenceNo is required.");
-            }
-
-      
-
-            if (string.IsNullOrEmpty(body.TraceNumber))
-            {
-                errorMessages.Add("TraceNumber is required.");
-            }
-
-        
-
+            // Validate input fields
+            if (body.Amount <= 0) errorMessages.Add("Amount must be greater than zero.");
+            if (string.IsNullOrEmpty(body.DAccountNo)) errorMessages.Add("DAccountNo is required.");
+            if (string.IsNullOrEmpty(body.OrderId)) errorMessages.Add("OrderId is required.");
+            if (string.IsNullOrEmpty(body.ReferenceNo)) errorMessages.Add("ReferenceNo is required.");
+            if (string.IsNullOrEmpty(body.TraceNumber)) errorMessages.Add("TraceNumber is required.");
 
             bool isReferenceNoUnique = await _confirmOrderService.IsReferenceNoUniqueAsync(body.ReferenceNo);
             if (!isReferenceNoUnique)
@@ -182,79 +120,52 @@ namespace LIB.API.Controllers
                 errorMessages.Add("Error: ReferenceNo must be unique.");
             }
 
-
-            // If there are any validation errors, return a bad request response with the errors
+            // If validation errors exist, return BadRequest
             if (errorMessages.Any())
             {
-                return BadRequest(new
-                {
-                    returnCode = "ERROR",
-                    ticketId = Guid.NewGuid().ToString(),
-                    traceId = body.ReferenceNo,
-                    feedbacks = new[]
-                    {
-                new
-                {
-                    code = "SB_DS_001", // Custom error code for validation error
-                    label = "Validation failed",
-                    severity = "ERROR",
-                    type = "SYS",
-                    source = "Order Create Transfer",
-                    origin = "OrdersController",
-                    spanId = HttpContext.TraceIdentifier,
-                    parameters = errorMessages.Select(msg => new { code = "0", value = msg }).ToArray()
-                }
+                return BadRequest(GenerateErrorResponse("SB_DS_001", "Validation failed", "Order Create Transfer", string.Join(", ", errorMessages)));
             }
-                });
+
+            // Step 1: Fetch Order Status Before Processing Transfer
+            var orderRequest = new OrderRequestDto
+            {
+                OrderId = body.OrderId,
+                ReferenceId = body.ReferenceNo
+            };
+
+            var order = await _orderService.FetchOrderAsync(orderRequest);
+
+            if (order == null)
+            {
+                return NotFound(GenerateErrorResponse("SB_DS_003", "Order not found or failed to fetch.", "CreateTransfer", "Order not found"));
+            }
+
+            // Step 2: Ensure Order Status Code is 0 Before Proceeding
+            if (order.StatusCodeResponse != 0)
+            {
+                return BadRequest(GenerateErrorResponse("SB_DS_004", $"Order is {order.StatusCodeResponseDescription}. Cannot proceed with transfer.", "CreateTransfer", order.OrderId));
             }
 
             try
             {
-                // Call the service to handle transfer and order confirmation using the provided parameters
+                // Proceed with transfer
                 var response = await _confirmOrderService.CreateTransferAsync(
                     body.Amount,
                     body.DAccountNo,
                     body.OrderId,
                     body.ReferenceNo,
                     body.TraceNumber
-            
                 );
 
                 return Ok(response);
             }
             catch (Exception ex)
             {
-                // Log the error into the AirlinesError table and return the logged error message.
-                await SaveErrorToAirlinesErrorAsync(
-                    body.OrderId,
-                    ex.Message,
-                    "CreateOrder",
-                    body.ReferenceNo
-                );
+                await SaveErrorToAirlinesErrorAsync(body.OrderId, ex.Message, "CreateTransfer", body.ReferenceNo);
 
-                return StatusCode(500, new
-                {
-                    returnCode = "ERROR",
-                    ticketId = Guid.NewGuid().ToString(),
-                    traceId = body.ReferenceNo,
-                    feedbacks = new[]
-                    {
-                new
-                {
-                    code = "SB_DS_003",
-                    label = ex.Message,
-                    severity = "ERROR",
-                    type = "SYS",
-                    source = "Order CreateTransfer",
-                    origin = "OrdersController",
-                    spanId = HttpContext.TraceIdentifier,
-                    parameters = new[] { new { code = "0", value = "Internal server error" } }
-                }
-            }
-                });
+                return StatusCode(500, GenerateErrorResponse("SB_DS_003", ex.Message, "Order CreateTransfer", "Internal server error"));
             }
         }
-        // Method to save error details into the AirlinesError table
 
         private async Task SaveErrorToAirlinesErrorAsync( string orderId,string errorMessage, string errorType,string refrence)
         {

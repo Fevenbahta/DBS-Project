@@ -13,9 +13,10 @@ namespace LIB.API.Application.DTOs
     {
   
         public string OrderId { get; set; }
-
         public string ReferenceId { get; set; }  // Add ReferenceId field
-      
+        public string BillerType { get; set; }
+        public string PhoneNumber { get; set; }
+        public string AccountNo { get; set; }
     }
 
 }
